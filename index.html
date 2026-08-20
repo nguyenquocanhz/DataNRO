@@ -206,7 +206,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   <div class="bar">
     <div class="brand">
       <h1>Kho Dữ Liệu NRO</h1>
-      <span class="sub">vật phẩm · kỹ năng · quái · NPC · bản đồ</span>
+      <span class="sub">vật phẩm · loại đồ · kỹ năng · mốc sức mạnh · quái · NPC · bản đồ · nhiệm vụ</span>
     </div>
 
     <div class="tabs" id="tabs" role="tablist"></div>
@@ -423,6 +423,103 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
             `<span class="tag">${esc(m.name)} <b>${m.id}</b></span>`).join("")}</div>` : ""}`,
     },
 
+    types: {
+      label: "Loại đồ",
+      rows: () => D.itemTypes,
+      text: r => fold(r.label) + " " + r.v + " " + fold(r.examples.join(" ")),
+      sorts: [{ v: "id", label: "Sắp theo số loại", cmp: byId },
+              { v: "n", label: "Sắp theo số vật phẩm", cmp: desc("n") }],
+      mode: "table",
+      cols: [
+        { label: "loại", get: r => `<span class="id">${r.v}</span>` },
+        { label: "Nhãn", get: r => esc(r.label) +
+            (r.fromCode ? ` <span class="was">từ code</span>` : ` <span class="was">suy từ tên</span>`) },
+        { label: "Số vật phẩm", get: r => r.n, n: true },
+        { label: "Ví dụ", get: r => esc(r.examples.join(" · ")) },
+      ],
+      detail: r => `
+        <div class="top"><div><h2>${esc(r.label)}</h2><span class="id">loại ${r.v}</span></div></div>
+        <p class="desc">${r.fromCode
+          ? "Nhãn này lấy từ chú thích trong <code>UseItem.java</code> của server."
+          : "Nhãn này <b>suy ra</b> từ từ đầu phổ biến nhất trong tên vật phẩm, không phải tên chính thức."}</p>
+        <dl>
+          ${rowTag("Số vật phẩm", num(r.n))}
+        </dl>
+        <h3>Ví dụ</h3>
+        <div class="taglist">${r.examples.map(e => `<span class="tag">${esc(e)}</span>`).join("")}</div>
+        <button class="copy" type="button" data-jump-type="${r.v}">Xem ${num(r.n)} vật phẩm loại này</button>`,
+    },
+
+    tasks: {
+      label: "Nhiệm vụ",
+      rows: () => D.tasks,
+      text: r => fold(r.name) + " " + fold(r.detail) + " " + r.id,
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName },
+              { v: "nsub", label: "Sắp theo số bước", cmp: (a, b) => b.subs.length - a.subs.length || a.id - b.id }],
+      mode: "table",
+      cols: [
+        { label: "id", get: r => `<span class="id">${r.id}</span>` },
+        { label: "Tên nhiệm vụ", get: r => esc(r.name) },
+        { label: "Số bước", get: r => r.subs.length, n: true },
+        { label: "Bước đầu", get: r => esc((r.subs[0] || {}).name || "—") },
+      ],
+      detail: r => `
+        <div class="top"><div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        ${r.detail ? `<p class="desc">${esc(r.detail).replace(/\n/g, "<br>")}</p>` : ""}
+        <h3>${r.subs.length} bước</h3>
+        <div class="tablewrap"><table>
+          <thead><tr><th class="n">#</th><th>Bước</th><th class="n">Số lượng</th><th>NPC</th><th>Bản đồ</th></tr></thead>
+          <tbody>${r.subs.map((s, i) => `<tr>
+            <td class="n">${i + 1}</td>
+            <td>${esc(s.name)}</td>
+            <td class="n">${s.maxCount < 0 ? "—" : num(s.maxCount)}</td>
+            <td>${place(s.npc, D.taskNpcSymbol, npcName)}</td>
+            <td>${place(s.map, D.taskMapSymbol, mapName)}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>
+        ${placeholderNote(r.detail + " " + r.subs.map(s => s.name + " " + s.notify).join(" "))}`,
+    },
+
+    powers: {
+      label: "Mốc sức mạnh",
+      rows: () => D.powers,
+      text: r => String(r.power) + " " + fold(r.name),
+      sorts: [{ v: "id", label: "Sắp theo mốc tăng dần", cmp: byId },
+              { v: "nItems", label: "Sắp theo số vật phẩm", cmp: desc("nItems") },
+              { v: "nSkills", label: "Sắp theo số kỹ năng", cmp: desc("nSkills") }],
+      mode: "table",
+      cols: [
+        { label: "Mốc sức mạnh", get: r => `<span class="id">${num(r.power)}</span>`, n: true },
+        { label: "Vật phẩm mở khoá", get: r => r.nItems || "—", n: true },
+        { label: "Kỹ năng mở khoá", get: r => r.nSkills || "—", n: true },
+        { label: "Gồm", get: r => esc([...r.items.slice(0, 2).map(i => i.name),
+                                       ...r.skills.slice(0, 2).map(s => s.name + " " + s.point)].join(" · ")) },
+      ],
+      detail: r => `
+        <div class="top"><div><h2>${num(r.power)} sức mạnh</h2>
+          <span class="id">${r.nItems} đồ · ${r.nSkills} kỹ năng</span></div></div>
+        ${r.items.length ? `<h3>Vật phẩm mở khoá (${r.items.length})</h3>
+          <div class="tablewrap"><table>
+            <thead><tr><th></th><th>id</th><th>Tên</th></tr></thead>
+            <tbody>${r.items.map(i => `<tr>
+              <td>${icon(i.icon, 24, "sm")}</td>
+              <td><span class="id">${i.id}</span></td>
+              <td>${esc(i.name)}</td>
+            </tr>`).join("")}</tbody>
+          </table></div>` : ""}
+        ${r.skills.length ? `<h3>Kỹ năng mở khoá (${r.skills.length})</h3>
+          <div class="tablewrap"><table>
+            <thead><tr><th></th><th>id</th><th>Tên</th><th class="n">Cấp</th></tr></thead>
+            <tbody>${r.skills.map(s => `<tr>
+              <td>${icon(s.icon, 24, "sm")}</td>
+              <td><span class="id">${s.id}</span></td>
+              <td>${esc(s.name)}</td>
+              <td class="n">${s.point}</td>
+            </tr>`).join("")}</tbody>
+          </table></div>` : ""}`,
+    },
+
     maps: {
       label: "Bản đồ",
       rows: () => D.maps,
@@ -461,6 +558,22 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
             `<span class="tag">${esc(w.name || mapName[w.to] || "?")}${w.to >= 0 ? ` <b>${w.to}</b>` : ""}</span>`).join("")}</div>` : ""}`,
     },
   };
+
+  /** Dia diem cua mot buoc nhiem vu: id am la dia diem tuong trung, duong la id that. */
+  function place(id, symbols, names){
+    if (id === -1) return `<span class="was">—</span>`;
+    if (id < 0) return `${esc(symbols[String(id)] || ("id " + id))} <span class="was">tương trưng</span>`;
+    return `${esc(names[id] || "?")} <span class="was">${id}</span>`;
+  }
+
+  /** Liet ke y nghia cac %N xuat hien trong doan van ban nhiem vu. */
+  function placeholderNote(text){
+    const found = [...new Set((text || "").match(/%\d+/g) || [])]
+      .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+    if (!found.length) return "";
+    return `<h3>Chỗ thế tên</h3><div class="taglist">${found.map(p =>
+      `<span class="tag"><b>${p}</b> ${esc(D.placeholders[p.slice(1)] || "?")}</span>`).join("")}</div>`;
+  }
 
   function labelOf(list, v){
     const hit = (list || []).find(x => x.v === v);
@@ -738,6 +851,13 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   });
 
   el.detailBody.addEventListener("click", e => {
+    const jump = e.target.closest("[data-jump-type]");
+    if (jump){
+      switchView("items");
+      el.filter.value = jump.dataset.jumpType;
+      render(true);
+      return;
+    }
     const b = e.target.closest("[data-copy]");
     if (b) copy(Number(b.dataset.copy));
   });

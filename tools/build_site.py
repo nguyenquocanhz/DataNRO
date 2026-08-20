@@ -36,6 +36,39 @@ LOSSLESS = "--lossless" in sys.argv
 GENDER = {0: "Trái Đất", 1: "Namếc", 2: "Xayda", 3: "Dùng chung"}
 PLANET = {0: "Trái Đất", 1: "Namếc", 2: "Xayda"}
 
+# Nhan loai vat pham lay tu comment trong UseItem.java, cho nao code co noi ro.
+# Cac loai con lai suy tu ten vat pham (xem labels_from_names).
+ITEM_TYPE_LABELS = {
+    6: "Đậu thần",
+    7: "Sách học kỹ năng",
+    11: "Túi đồ",
+    12: "Ngọc rồng",
+    23: "Thú cưỡi (mới)",
+    24: "Thú cưỡi (cũ)",
+    33: "Thẻ nạp",
+}
+
+# Nhiem vu dung id am lam dia diem tuong trung, tuy hanh tinh nguoi choi ma doi.
+# Lay tu hang so MAP_* / NPC_* trong ConstTask.java.
+TASK_MAP_SYMBOL = {
+    -1: "không chỉ định", -2: "Nhà", -3: "Map 200", -4: "Vách núi",
+    -5: "Map 500", -6: "Trung tâm vũ trụ", -7: "Map quái bay 600",
+    -8: "Làng", -9: "Map Quy Lão",
+}
+TASK_NPC_SYMBOL = {
+    -1: "không chỉ định", -2: "NPC nhà", -3: "NPC Trung tâm vũ trụ",
+    -4: "NPC shop làng", -5: "NPC Quy Lão",
+}
+
+# Chuoi nhiem vu chua %1..%14, thay bang ten thuc tuy hanh tinh.
+# Lay tu hang so TEN_* trong ConstTask.java.
+PLACEHOLDERS = {
+    1: "tên làng", 2: "tên NPC nhà", 3: "tên map 200", 4: "tên quái map 200",
+    5: "tên vách núi", 6: "tên map 500", 7: "tên NPC trung tâm vũ trụ",
+    8: "tên NPC shop làng", 9: "tên quái bay 600", 10: "tên NPC Quy Lão",
+    11: "tên map Quy Lão", 12: "tên quái 3000", 13: "tên map 600", 14: "tên quái 1000",
+}
+
 
 # ---------------------------------------------------------------- doc MySQL
 
@@ -199,6 +232,55 @@ def load_maps():
     return out
 
 
+def load_tasks():
+    mains = rows_of("task_main_template", ["id", "NAME", "detail"])
+    subs = rows_of("task_sub_template",
+                   ["task_main_id", "NAME", "max_count", "notify", "npc_id", "map", "ducvupro"],
+                   order="ducvupro")
+
+    by_main = collections.defaultdict(list)
+    for s in subs:
+        by_main[num(s[0])].append({
+            "name": s[1], "maxCount": num(s[2], -1), "notify": clean(s[3]),
+            "npc": num(s[4], -1), "map": num(s[5], -1), "order": num(s[6]),
+        })
+
+    return [{
+        "id": num(m[0]), "name": m[1], "detail": clean(m[2]),
+        "subs": by_main.get(num(m[0]), []),
+    } for m in mains]
+
+
+def load_power_marks(items, skills):
+    """Cac moc suc manh: gom tat ca power_require cua vat pham va tung cap ky nang.
+
+    Day khong phai bang co san trong DB. No la thu duoc rut ra tu du lieu -
+    tra loi cau hoi 'toi moc suc manh nay thi mo khoa duoc nhung gi'.
+    """
+    marks = {}
+
+    def slot(p):
+        return marks.setdefault(p, {"id": p, "power": p, "items": [], "skills": []})
+
+    for it in items:
+        if it["power"] > 0:
+            slot(it["power"])["items"].append({"id": it["id"], "name": it["name"], "icon": it["icon"]})
+
+    for s in skills:
+        for lv in s["levels"]:
+            if lv["power"] > 0:
+                slot(lv["power"])["skills"].append({
+                    "id": s["id"], "name": s["name"], "point": lv["point"], "icon": s["icon"],
+                })
+
+    out = sorted(marks.values(), key=lambda m: m["power"])
+    for m in out:
+        m["nItems"] = len(m["items"])
+        m["nSkills"] = len(m["skills"])
+        m["name"] = f"{m['power']:,}".replace(",", ".") + " sức mạnh"
+    return out
+
+
 # ------------------------------------------------------------------- atlas
 
 def build_atlas(icon_ids):
@@ -246,9 +328,12 @@ def labels_from_names(rows, key="type"):
 
 def main():
     items, skills, mobs, npcs, maps = load_items(), load_skills(), load_mobs(), load_npcs(), load_maps()
+    tasks = load_tasks()
+    powers = load_power_marks(items, skills)
     print(f"  {len(items)} vat pham | {len(skills)} ky nang "
           f"({sum(len(s['levels']) for s in skills)} cap) | {len(mobs)} quai | "
-          f"{len(npcs)} npc | {len(maps)} map")
+          f"{len(npcs)} npc | {len(maps)} map | {len(tasks)} nhiem vu "
+          f"({sum(len(t['subs']) for t in tasks)} buoc) | {len(powers)} moc suc manh")
 
     os.makedirs(os.path.join(SITE, "assets"), exist_ok=True)
 
@@ -267,8 +352,25 @@ def main():
     print(f"  atlas {atlas.width}x{atlas.height}, {len(coords)}/{len(wanted)} icon, "
           f"{os.path.getsize(atlas_path)/1048576:.2f} MB{' (lossless)' if LOSSLESS else ' (255 mau)'}")
 
-    itemTypes = labels_from_names(items)
+    auto = labels_from_names(items)
     mobTypes = labels_from_names(mobs)
+
+    # nhan tu code duoc uu tien, con lai lay nhan suy tu ten
+    itemTypes = []
+    examples = collections.defaultdict(list)
+    for it in items:
+        if len(examples[it["type"]]) < 3:
+            examples[it["type"]].append(it["name"])
+
+    for t, n in sorted(collections.Counter(i["type"] for i in items).items()):
+        itemTypes.append({
+            "id": t, "v": t,
+            "label": ITEM_TYPE_LABELS.get(t, auto[t]),
+            "fromCode": t in ITEM_TYPE_LABELS,
+            "n": n,
+            "examples": examples[t],
+            "name": ITEM_TYPE_LABELS.get(t, auto[t]),
+        })
 
     data = {
         "items": items,
@@ -276,8 +378,12 @@ def main():
         "mobs": mobs,
         "npcs": npcs,
         "maps": maps,
-        "itemTypes": [{"v": t, "label": itemTypes[t], "n": n}
-                      for t, n in sorted(collections.Counter(i["type"] for i in items).items())],
+        "tasks": tasks,
+        "powers": powers,
+        "itemTypes": itemTypes,
+        "taskMapSymbol": TASK_MAP_SYMBOL,
+        "taskNpcSymbol": TASK_NPC_SYMBOL,
+        "placeholders": PLACEHOLDERS,
         "mobTypes": [{"v": t, "label": mobTypes[t], "n": n}
                      for t, n in sorted(collections.Counter(m["type"] for m in mobs).items())],
         "classes": [{"v": c, "n": n}
