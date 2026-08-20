@@ -154,7 +154,14 @@ short soKhung
 
 Vẽ một khung = vẽ lần lượt từng miếng: cắt vùng `(x0,y0,w,h)` của mảnh ảnh có `ID` tương ứng rồi đặt tại `(dx, dy)`. Neo `TOP|LEFT`, không trừ chiều rộng như nhân vật.
 
-Sprite sheet của **101 con** được gom vào atlas thứ hai `assets/mobs.png` (0,81 MB). 8 con bị bỏ qua vì dùng format boss (`readDataNewBoss`) hoặc file lỗi: 70, 76, 77, 85, 88, 89, 92, 93.
+Sprite sheet của **108/109 con** được gom vào atlas thứ hai `assets/mobs.png` (1,10 MB). Chỉ con 70 bị bỏ vì file của nó chứa chuỗi text thay cho dữ liệu khung.
+
+**Boss** dùng biến thể `readDataNewBoss`, khác đúng một chỗ: `x0/y0` của mảnh ảnh là `short` chứ không phải `byte` — sheet của boss to hơn 255px nên một byte không đủ để chỉ toạ độ. Vài file lại có header 2 byte `[id][kiểu]` thay vì 1 byte; script tự nhận ra bằng cách thử đọc trường độ dài ở cả hai vị trí, chỉ một trong hai cho ra giá trị nằm gọn trong file.
+
+Hai chi tiết nữa phải xử lý mới ra hình đúng:
+
+- **Thứ tự phát không phải 0,1,2…** Sau danh sách khung còn một bảng `arrFrame` — thứ tự phát thật. Quái *Heo Xayda* có 12 khung nhưng chu kỳ đi chỉ dùng 3 khung theo thứ tự `1,1,2,2,3,3,2,2,…`; phát tuần tự cả 12 khung thì lẫn cả tư thế đánh và chết vào, vừa loạn vừa giật trục y. 48/108 con có bảng này.
+- **Tỉ lệ hiển thị lấy theo khung điển hình.** Boss có khung lao tới rộng tới 500px trong khi tư thế đứng chỉ ~93px; lấy hộp bao gộp hết thì con quái bị co còn 0,3 lần. Trang lấy khung ở phân vị 35% diện tích làm chuẩn, khung to bất thường tràn ra ngoài và bị cắt.
 
 ## Vì sao gộp icon thành atlas
 

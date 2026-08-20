@@ -447,7 +447,7 @@ def main():
         "parts": parts,
         "charInfo": charInfo,
         "mobSprites": {str(mid): {"infos": sp["infos"], "frames": sp["frames"],
-                                  "sheet": mobCoords[mid]}
+                                  "seq": sp["seq"], "sheet": mobCoords[mid]}
                        for mid, sp in mobSprites.items() if mid in mobCoords},
         "itemTypes": itemTypes,
         "taskMapSymbol": TASK_MAP_SYMBOL,

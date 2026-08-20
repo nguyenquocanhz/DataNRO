@@ -46,29 +46,64 @@ def _reader(data):
 
 
 def parse_file(path):
-    raw = open(path, "rb").read()
-    kind = raw[0]
-    if kind != 0:
-        raise ValueError(f"kieu {kind} (boss, format khac)")
+    """Doc mot file quai.
 
-    pos = 1
+    Byte dau la 'kieu', quyet dinh client doc bang ham nao:
+      0        -> readData
+      1        -> readMobNew voi typeread = 1
+      khac     -> readMobNew, va khi do x0/y0 cua manh anh la SHORT chu khong
+                  phai byte. Day la khac biet duy nhat giua hai ham; boss to
+                  hon 255px nen mot byte khong du de chi toa do trong sheet.
+    """
+    raw = open(path, "rb").read()
+
+    # Phan lon file co header 1 byte (kieu). Vai file lai co 2 byte: [id][kieu].
+    # Nhan ra bang cach thu doc int do dai phan khung: chi mot trong hai vi tri
+    # cho ra do dai nam gon trong file.
+    head = None
+    for h in (1, 2):
+        try:
+            v = struct.unpack_from(">i", raw, h)[0]
+            if 0 < v < len(raw) - h - 8:
+                head = h
+                break
+        except struct.error:
+            pass
+    if head is None:
+        raise ValueError("khong doc duoc do dai phan khung")
+
+    kind = raw[head - 1]
+    wide = kind not in (0, 1)
+
+    pos = head
     flen = struct.unpack_from(">i", raw, pos)[0]; pos += 4
     frame_data = raw[pos:pos + flen]; pos += flen
     plen = struct.unpack_from(">i", raw, pos)[0]; pos += 4
     png = raw[pos:pos + plen]
 
     u8, i8, i16 = _reader(frame_data)
+    coord = i16 if wide else u8
 
     infos = {}
     for _ in range(i8()):
         iid = i8()
-        infos[iid] = [u8(), u8(), u8(), u8()]      # x0, y0, w, h
+        x0, y0 = coord(), coord()
+        infos[iid] = [x0, y0, u8(), u8()]          # x0, y0, w, h
 
     frames = []
     for _ in range(i16()):
         frames.append([[i16(), i16(), i8()] for _ in range(i8())])
 
-    return {"infos": infos, "frames": frames, "png": png}
+    # Sau danh sach khung con mot bang nua: thu tu phat hoat anh.
+    # Game khong phat khung theo thu tu 0,1,2... ma theo bang nay.
+    seq = []
+    try:
+        for _ in range(i16()):
+            seq.append(i16())
+    except (IndexError, struct.error):
+        seq = []
+
+    return {"kind": kind, "infos": infos, "frames": frames, "seq": seq, "png": png}
 
 
 def load_all(mob_dir):
@@ -76,14 +111,31 @@ def load_all(mob_dir):
     if not os.path.isdir(mob_dir):
         return sprites, skipped
 
+    dropped = 0
     for name in sorted(os.listdir(mob_dir)):
         path = os.path.join(mob_dir, name)
         if not os.path.isfile(path) or not name.isdigit():
             continue
         try:
-            sprites[int(name)] = parse_file(path)
+            sp = parse_file(path)
+
+            # Vai manh khai bao vung cat nam ngoai sheet (vi du y0 = 255 nhu mot
+            # gia tri danh dau). Trong atlas gop, cat ra ngoai la an nham sang
+            # sheet cua con ben canh, nen bo han cac manh do.
+            with Image.open(io.BytesIO(sp["png"])) as im:
+                W, H = im.size
+            bad = [i for i, r in sp["infos"].items()
+                   if r[0] + r[2] > W or r[1] + r[3] > H or r[2] <= 0 or r[3] <= 0]
+            for i in bad:
+                del sp["infos"][i]
+            dropped += len(bad)
+
+            sprites[int(name)] = sp
         except Exception as e:
             skipped.append((name, str(e)[:40]))
+
+    if dropped:
+        print(f"  (bo {dropped} manh anh khai bao vuot ra ngoai sheet)")
     return sprites, skipped
 
 

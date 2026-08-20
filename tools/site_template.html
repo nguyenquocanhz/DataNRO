@@ -188,12 +188,11 @@ dd.wrap{text-align:left; font-family:inherit; white-space:normal}
 }
 .charbox{
   width:160px; height:180px; flex:none; overflow:hidden; border-radius:8px;
+  display:grid; place-items:center;
   background:repeating-conic-gradient(var(--line-soft) 0% 25%, transparent 0% 50%) 50%/14px 14px;
 }
-.charstage{
-  position:relative; width:80px; height:90px;
-  transform:scale(2); transform-origin:top left;
-}
+/* kich thuoc va ti le do JS dat, tuy hop bao that cua sprite */
+.charstage{position:relative}
 .charctl{display:flex; flex-direction:column; gap:9px; min-width:0; flex:1}
 .charctl button{
   padding:7px 12px; font:inherit; font-size:13px; font-weight:500;
@@ -688,7 +687,22 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     </div>`;
   }
 
-  const STAGE_W = 80, STAGE_H = 90, FOOT_Y = 82;
+  const BOX_W = 160, BOX_H = 180, MAX_ZOOM = 2;
+
+  /** Dat san khau vua dung hop bao, roi phong to het co ma van lot khung xem.
+   *
+   * Boss to gap nhieu lan quai thuong (co con sheet 852x834), khung co dinh
+   * 80x90 se cat mat hoac day han ra ngoai - nen ti le phai tinh theo tung con.
+   */
+  function fitStage(stage, box){
+    const w = Math.max(1, box.maxX - box.minX);
+    const h = Math.max(1, box.maxY - box.minY);
+    const scale = Math.min(MAX_ZOOM, BOX_W / w, BOX_H / h);
+    stage.style.width = w + "px";
+    stage.style.height = h + "px";
+    stage.style.transform = `scale(${scale.toFixed(3)})`;
+    return { w, h, scale };
+  }
 
   /** Toa do tung manh cua mot khung hinh, theo dung cong thuc trong Char.paint. */
   function charLayers(npc, cf){
@@ -717,10 +731,9 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     const layers = charLayers(npc, cf);
     if (!layers.length) return "";
 
-    // Canh theo hop bao chung cua CA doan hoat anh (truyen vao qua box),
-    // de nhan vat khong nhay lung tung giua cac khung.
-    const dx = Math.round((STAGE_W - (box.maxX - box.minX)) / 2 - box.minX);
-    const dy = Math.round(STAGE_H - 4 - box.maxY);
+    // Toa do tinh theo goc tren-trai cua hop bao chung CA doan hoat anh,
+    // nho vay nhan vat dung yen mot cho thay vi nhay giua cac khung.
+    const dx = -box.minX, dy = -box.minY;
 
     return layers.map(l =>
       `<i class="sp" style="position:absolute;left:${l.x + dx}px;top:${l.y + dy}px;` +
@@ -729,14 +742,12 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
 
   /** Hop bao chung cua moi khung, dung de canh vi tri co dinh. */
   function charBox(npc, frames){
-    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    const boxes = [];
     for (const cf of frames){
-      for (const l of charLayers(npc, cf)){
-        minX = Math.min(minX, l.x); maxX = Math.max(maxX, l.x + l.w);
-        minY = Math.min(minY, l.y); maxY = Math.max(maxY, l.y + l.h);
-      }
+      const b = frameBox(charLayers(npc, cf));
+      if (b) boxes.push(b);
     }
-    return { minX, maxX, minY, maxY };
+    return typicalBox(boxes);
   }
 
   let animTimer = null;
@@ -793,6 +804,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     if (!frames.length) return;
 
     const box = charBox(npc, frames);
+    fitStage(stage, box);
     runAnim(frames.length, i => stage.innerHTML = charFrameHtml(npc, frames[i], box));
   }
 
@@ -818,20 +830,60 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     return out;
   }
 
+  /** Thu tu phat that su: bang seq neu co, khong thi lan luot tung khung.
+   *
+   * Khong dung seq thi hoat anh vua loan vua nhay, vi danh sach khung con chua
+   * ca tu the danh va chet - nhung khung khong nam trong chu ky di.
+   */
+  function mobPlaylist(sp){
+    return (sp.seq && sp.seq.length) ? sp.seq : sp.frames.map((_, i) => i);
+  }
+
+  /** Hop bao cua nhung khung CO KICH THUOC DIEN HINH.
+   *
+   * Gop het moi khung thi hong: boss co khung danh rong toi 366px trong khi
+   * tu the thuong chi ~93px, lay ca vao thi ti le bi keo xuong 0.3 va con quai
+   * nho ti hon. Bo cac khung to bat thuong ra, chung se tran ra ngoai va bi cat -
+   * doi lai tu the thuong hien dung co.
+   */
+  function typicalBox(boxes){
+    if (!boxes.length) return { minX: 0, maxX: 1, minY: 0, maxY: 1 };
+
+    // Lay khung o phan vi 35% dien tich lam chuan, roi noi rong 25%.
+    // Gop het moi khung thi hong: boss co khung lao toi trai rong toi 500px
+    // trong khi tu the dung chi ~93px, lay ca vao thi con quai nho ti hon.
+    // Khung to bat thuong se tran ra ngoai va bi cat - dung y muon.
+    const sorted = boxes.slice().sort((a, b) =>
+      (a.maxX - a.minX) * (a.maxY - a.minY) - (b.maxX - b.minX) * (b.maxY - b.minY));
+    const ref = sorted[Math.floor(sorted.length * 0.35)] || sorted[0];
+
+    const padX = (ref.maxX - ref.minX) * 0.125;
+    const padY = (ref.maxY - ref.minY) * 0.125;
+    return {
+      minX: ref.minX - padX, maxX: ref.maxX + padX,
+      minY: ref.minY - padY, maxY: ref.maxY + padY,
+    };
+  }
+
+  function frameBox(layers){
+    if (!layers.length) return null;
+    return {
+      minX: Math.min(...layers.map(l => l.x)), maxX: Math.max(...layers.map(l => l.x + l.w)),
+      minY: Math.min(...layers.map(l => l.y)), maxY: Math.max(...layers.map(l => l.y + l.h)),
+    };
+  }
+
   function mobBox(sp){
-    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
-    for (let f = 0; f < sp.frames.length; f++){
-      for (const l of mobLayers(sp, f)){
-        minX = Math.min(minX, l.x); maxX = Math.max(maxX, l.x + l.w);
-        minY = Math.min(minY, l.y); maxY = Math.max(maxY, l.y + l.h);
-      }
+    const boxes = [];
+    for (const f of new Set(mobPlaylist(sp))){
+      const b = frameBox(mobLayers(sp, f));
+      if (b) boxes.push(b);
     }
-    return { minX, maxX, minY, maxY };
+    return typicalBox(boxes);
   }
 
   function mobFrameHtml(sp, f, box){
-    const dx = Math.round((STAGE_W - (box.maxX - box.minX)) / 2 - box.minX);
-    const dy = Math.round(STAGE_H - 4 - box.maxY);
+    const dx = -box.minX, dy = -box.minY;
     return mobLayers(sp, f).map(l =>
       `<i class="msp" style="position:absolute;left:${l.x + dx}px;top:${l.y + dy}px;` +
       `width:${l.w}px;height:${l.h}px;background-position:${-l.ax}px ${-l.ay}px"></i>`).join("");
@@ -840,13 +892,16 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   function mobPreview(mob){
     const sp = mobSprite(mob);
     if (!sp || !sp.frames.length) return "";
-    const many = sp.frames.length > 1;
+    const list = mobPlaylist(sp);
+    const many = list.length > 1;
     return `<div class="charwrap">
       <div class="charbox"><div class="charstage" id="charstage"></div></div>
       <div class="charctl">
         ${many ? `<button type="button" id="charplay">Tạm dừng</button>
-        <input type="range" id="charframe" min="0" max="${sp.frames.length - 1}" value="0" aria-label="Khung hình">` : ""}
-        <span class="lbl" id="charlbl">${many ? `khung 1 / ${sp.frames.length}` : "chỉ có 1 khung"}</span>
+        <input type="range" id="charframe" min="0" max="${list.length - 1}" value="0" aria-label="Khung hình">` : ""}
+        <span class="lbl" id="charlbl">${many
+          ? `khung 1 / ${list.length}${sp.seq && sp.seq.length ? " (theo bảng thứ tự)" : ""}`
+          : "chỉ có 1 khung"}</span>
       </div>
     </div>`;
   }
@@ -857,7 +912,9 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     const stage = document.getElementById("charstage");
     if (!sp || !stage || !sp.frames.length) return;
     const box = mobBox(sp);
-    runAnim(sp.frames.length, i => stage.innerHTML = mobFrameHtml(sp, i, box));
+    fitStage(stage, box);
+    const list = mobPlaylist(sp);
+    runAnim(list.length, i => stage.innerHTML = mobFrameHtml(sp, list[i], box));
   }
 
   /** Bang quai trong mot ban do.
