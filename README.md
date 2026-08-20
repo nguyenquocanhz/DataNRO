@@ -19,7 +19,7 @@ Trang tra cứu dữ liệu NRO: vật phẩm, kỹ năng, quái, NPC, bản đ�
 
 - **2.415 icon** (vật phẩm, kỹ năng, avatar NPC, mảnh sprite nhân vật) gộp trong một ảnh atlas duy nhất
 - **Tra chéo**: mở một bản đồ thấy bảng quái và bảng NPC trong đó kèm đầy đủ cột; mở một con quái thấy nó xuất hiện ở những bản đồ nào
-- **Preview hoạt ảnh nhân vật**: mở một NPC thấy nhân vật được ghép từ ba mảnh đầu / thân / chân và chạy qua từng khung hình
+- **Preview hoạt ảnh**: mở một NPC thấy nhân vật ghép từ ba mảnh đầu / thân / chân; mở một con quái thấy nó cử động qua từng khung
 - **Địa điểm nhiệm vụ**: mỗi bước nhiệm vụ kèm NPC và bản đồ; id âm là địa điểm tượng trưng (Nhà, Làng, Trung tâm vũ trụ…) đã giải nghĩa
 - Vật phẩm / kỹ năng / NPC hiện dạng thẻ có icon; quái và bản đồ hiện dạng bảng vì dữ liệu thiên về số
 - Tìm kiếm **không dấu vẫn ra** — gõ `ao vai` ra `Áo vải 3 lỗ`
@@ -134,6 +134,28 @@ Một điểm đáng lưu ý: **phần lớn NPC chỉ có đúng một tư th�
 
 Atlas chỉ gom mảnh của **NPC** (914 ảnh). Gom cả 2.111 part thì thành 12.819 ảnh / 31,7 MB, quá nặng cho một trang tĩnh.
 
+### Quái thì khác hẳn
+
+Quái không ghép từ ba mảnh. Mỗi con có **một sprite sheet riêng** nằm trong `data/mob/x2/<id>` — file đó là một gói trọn:
+
+```
+[byte kiểu][int độ dài][dữ liệu khung][int độ dài][PNG]
+```
+
+Phần dữ liệu khung dùng format `EffectData.readData` của client:
+
+```
+byte  soMảnhẢnh
+  byte ID, ubyte x0, ubyte y0, ubyte w, ubyte h
+short soKhung
+  byte soMiếng
+    short dx, short dy, byte idẢnh
+```
+
+Vẽ một khung = vẽ lần lượt từng miếng: cắt vùng `(x0,y0,w,h)` của mảnh ảnh có `ID` tương ứng rồi đặt tại `(dx, dy)`. Neo `TOP|LEFT`, không trừ chiều rộng như nhân vật.
+
+Sprite sheet của **101 con** được gom vào atlas thứ hai `assets/mobs.png` (0,81 MB). 8 con bị bỏ qua vì dùng format boss (`readDataNewBoss`) hoặc file lỗi: 70, 76, 77, 85, 88, 89, 92, 93.
+
 ## Vì sao gộp icon thành atlas
 
 | Cách | Dung lượng | Số request |
@@ -164,6 +186,7 @@ python tools/build_site.py --lossless
 index.html            trang tra cứu, không phụ thuộc thư viện ngoài
 assets/
   icons.png           atlas 2048×2532, 2.415 icon (kèm mảnh sprite NPC)
+  mobs.png            atlas sprite sheet của 101 quái
   icons.json          icon_id -> [x, y, w, h] trên atlas
   data.json           8 bảng dữ liệu + bảng part + bảng CharInfo
 tools/
@@ -171,6 +194,7 @@ tools/
   build_single.py     gộp thành một file HTML chạy offline
   site_template.html  khuôn của index.html
   charinfo.json       bảng hoạt ảnh 33 khung trích từ client
+  mobsprite.py        đọc và đóng gói sprite quái
 ```
 
 ## Dựng lại

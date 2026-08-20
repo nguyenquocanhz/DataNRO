@@ -117,7 +117,9 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 .thumb.empty{color:var(--ink-3); font-size:10px; font-family:"IBM Plex Mono",monospace}
 .thumb.sm{width:28px; height:28px; border-radius:6px}
 .thumb.sm.empty{font-size:9px}
-.sp{display:block; background-image:url("assets/icons.png?v=ec9f06526b"); background-repeat:no-repeat; image-rendering:pixelated}
+.sp{display:block; background-image:url("assets/icons.png?v=85e9c56961"); background-repeat:no-repeat; image-rendering:pixelated}
+/* sprite quai nam trong mot atlas rieng */
+.msp{display:block; background-image:url("assets/mobs.png?v=85e9c56961"); background-repeat:no-repeat; image-rendering:pixelated}
 
 .id{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; color:var(--brass)}
 
@@ -413,6 +415,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
       ],
       detail: r => `
         <div class="top"><div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        ${mobPreview(r)}
         <dl>
           ${rowTag("Loại", `${esc(labelOf(D.mobTypes, r.type))} · ${r.type}`)}
           ${rowTag("HP", num(r.hp))}
@@ -742,6 +745,45 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     if (animTimer){ clearInterval(animTimer); animTimer = null; }
   }
 
+  /** Chay vong hoat anh qua `count` khung, dung chung cho ca nhan vat lan quai. */
+  function runAnim(count, drawAt){
+    const slider = document.getElementById("charframe");
+    const label = document.getElementById("charlbl");
+    const play = document.getElementById("charplay");
+    let i = 0, running = true;
+
+    function draw(){
+      drawAt(i);
+      if (slider) slider.value = String(i);
+      if (label && count > 1) label.textContent = `khung ${i + 1} / ${count}`;
+    }
+
+    // chi mot khung thi ve mot lan roi thoi, khong can dong ho
+    if (count === 1){ draw(); return; }
+
+    function tick(){
+      stopAnim();
+      animTimer = setInterval(() => { i = (i + 1) % count; draw(); }, 140);
+    }
+
+    if (slider) slider.addEventListener("input", () => {
+      i = Number(slider.value);
+      running = false;
+      if (play) play.textContent = "Chạy";
+      stopAnim();
+      draw();
+    });
+
+    if (play) play.addEventListener("click", () => {
+      running = !running;
+      play.textContent = running ? "Tạm dừng" : "Chạy";
+      if (running) tick(); else stopAnim();
+    });
+
+    draw();
+    tick();
+  }
+
   function startCharAnim(npc){
     stopAnim();
     const stage = document.getElementById("charstage");
@@ -750,45 +792,72 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     const frames = usableFrames(npc);
     if (!frames.length) return;
 
-    const slider = document.getElementById("charframe");
-    const label = document.getElementById("charlbl");
-    const play = document.getElementById("charplay");
     const box = charBox(npc, frames);
-    let i = 0, running = true;
+    runAnim(frames.length, i => stage.innerHTML = charFrameHtml(npc, frames[i], box));
+  }
 
-    function draw(){
-      stage.innerHTML = charFrameHtml(npc, frames[i], box);
-      if (slider) slider.value = String(i);
-      if (label && frames.length > 1) label.textContent = `khung ${i + 1} / ${frames.length}`;
+  // ---------- preview hoat anh quai ----------
+  // Quai khong ghep tu ba manh nhu nhan vat. Moi con co mot sprite sheet rieng
+  // kem bang manh anh (x0,y0,w,h) va danh sach khung; moi khung la mot chum
+  // mieng ghep lai. Doc y het EffectData.paintFrame cua client.
+
+  function mobSprite(mob){
+    return D.mobSprites ? D.mobSprites[mob.id] : null;
+  }
+
+  function mobLayers(sp, f){
+    const out = [];
+    const [ax, ay] = sp.sheet;
+    for (const [dx, dy, idImg] of sp.frames[f] || []){
+      const info = sp.infos[idImg];
+      if (!info) continue;
+      const [x0, y0, w, h] = info;
+      // paintFrame: cat vung (x0,y0,w,h) roi dat tai (x+dx, y+dy), neo TOP|LEFT
+      out.push({ ax: ax + x0, ay: ay + y0, w, h, x: dx, y: dy });
     }
+    return out;
+  }
 
-    // NPC dung yen: ve mot lan roi thoi, khong can dong ho
-    if (frames.length === 1){ draw(); return; }
-
-    function tick(){
-      stopAnim();
-      animTimer = setInterval(() => {
-        i = (i + 1) % frames.length;
-        draw();
-      }, 140);
+  function mobBox(sp){
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (let f = 0; f < sp.frames.length; f++){
+      for (const l of mobLayers(sp, f)){
+        minX = Math.min(minX, l.x); maxX = Math.max(maxX, l.x + l.w);
+        minY = Math.min(minY, l.y); maxY = Math.max(maxY, l.y + l.h);
+      }
     }
+    return { minX, maxX, minY, maxY };
+  }
 
-    slider.addEventListener("input", () => {
-      i = Number(slider.value);
-      running = false;
-      play.textContent = "Chạy";
-      stopAnim();
-      draw();
-    });
+  function mobFrameHtml(sp, f, box){
+    const dx = Math.round((STAGE_W - (box.maxX - box.minX)) / 2 - box.minX);
+    const dy = Math.round(STAGE_H - 4 - box.maxY);
+    return mobLayers(sp, f).map(l =>
+      `<i class="msp" style="position:absolute;left:${l.x + dx}px;top:${l.y + dy}px;` +
+      `width:${l.w}px;height:${l.h}px;background-position:${-l.ax}px ${-l.ay}px"></i>`).join("");
+  }
 
-    play.addEventListener("click", () => {
-      running = !running;
-      play.textContent = running ? "Tạm dừng" : "Chạy";
-      if (running) tick(); else stopAnim();
-    });
+  function mobPreview(mob){
+    const sp = mobSprite(mob);
+    if (!sp || !sp.frames.length) return "";
+    const many = sp.frames.length > 1;
+    return `<div class="charwrap">
+      <div class="charbox"><div class="charstage" id="charstage"></div></div>
+      <div class="charctl">
+        ${many ? `<button type="button" id="charplay">Tạm dừng</button>
+        <input type="range" id="charframe" min="0" max="${sp.frames.length - 1}" value="0" aria-label="Khung hình">` : ""}
+        <span class="lbl" id="charlbl">${many ? `khung 1 / ${sp.frames.length}` : "chỉ có 1 khung"}</span>
+      </div>
+    </div>`;
+  }
 
-    draw();
-    tick();
+  function startMobAnim(mob){
+    stopAnim();
+    const sp = mobSprite(mob);
+    const stage = document.getElementById("charstage");
+    if (!sp || !stage || !sp.frames.length) return;
+    const box = mobBox(sp);
+    runAnim(sp.frames.length, i => stage.innerHTML = mobFrameHtml(sp, i, box));
   }
 
   /** Bang quai trong mot ban do.
@@ -865,8 +934,8 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     ? Promise.resolve([JSON.parse(inlineData.textContent),
                        JSON.parse(document.getElementById("inline-icons").textContent)])
     : Promise.all([
-        fetch("assets/data.json?v=ec9f06526b").then(r => r.json()),
-        fetch("assets/icons.json?v=ec9f06526b").then(r => r.json()),
+        fetch("assets/data.json?v=85e9c56961").then(r => r.json()),
+        fetch("assets/icons.json?v=85e9c56961").then(r => r.json()),
       ]);
 
   source.then(([data, coords]) => {
@@ -1047,6 +1116,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
       `<button class="copy" type="button" data-copy="${id}">Chép id ${id}</button>`;
     el.detail.dataset.open = "true";
     if (view === "npcs") startCharAnim(r);
+    if (view === "mobs") startMobAnim(r);
     copy(id);
   });
 

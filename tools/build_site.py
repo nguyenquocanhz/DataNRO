@@ -21,12 +21,15 @@ import sys
 
 from PIL import Image
 
+import mobsprite
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 MYSQL = r"C:/xampp/mysql/bin/mysql.exe"
 DB = "tiennghich2d"
 ICON_DIR = r"D:/Teamobi2026/SRC/data/icon/x2"
+MOB_DIR = r"D:/Teamobi2026/SRC/data/mob/x2"
 TEMPLATE = os.path.join(HERE, "site_template.html")
 SITE = os.path.join(ROOT, "site")
 
@@ -373,6 +376,20 @@ def main():
 
     os.makedirs(os.path.join(SITE, "assets"), exist_ok=True)
 
+    mobSprites, mobSkipped = mobsprite.load_all(MOB_DIR)
+    if mobSprites:
+        mobAtlas, mobCoords = mobsprite.pack(mobSprites, ATLAS_WIDTH, PAD)
+        mob_path = os.path.join(SITE, "assets", "mobs.png")
+        if LOSSLESS:
+            mobAtlas.save(mob_path, optimize=True)
+        else:
+            mobAtlas.quantize(colors=255, method=Image.FASTOCTREE).save(mob_path, optimize=True)
+        print(f"  atlas quai {mobAtlas.width}x{mobAtlas.height}, {len(mobCoords)} sprite, "
+              f"{os.path.getsize(mob_path)/1048576:.2f} MB"
+              + (f" (bo qua {len(mobSkipped)}: {', '.join(n for n, _ in mobSkipped)})" if mobSkipped else ""))
+    else:
+        mobCoords = {}
+
     # bo khung hinh cua NPC: chi lay part ma NPC dung, khong lay het 2111 part
     # (het bang thi 12.819 anh / 31,7 MB, qua nang cho mot trang web tinh)
     npc_part_ids = set()
@@ -429,6 +446,9 @@ def main():
         "powers": powers,
         "parts": parts,
         "charInfo": charInfo,
+        "mobSprites": {str(mid): {"infos": sp["infos"], "frames": sp["frames"],
+                                  "sheet": mobCoords[mid]}
+                       for mid, sp in mobSprites.items() if mid in mobCoords},
         "itemTypes": itemTypes,
         "taskMapSymbol": TASK_MAP_SYMBOL,
         "taskNpcSymbol": TASK_NPC_SYMBOL,
@@ -456,7 +476,7 @@ def main():
     # co the giu data.json cu (GitHub Pages dat max-age=600) ghep voi index.html
     # moi -> trang bao loi vi thieu truong.
     stamp = hashlib.sha1()
-    for name in ("data.json", "icons.json", "icons.png"):
+    for name in ("data.json", "icons.json", "icons.png", "mobs.png"):
         with open(os.path.join(SITE, "assets", name), "rb") as f:
             stamp.update(f.read())
     build = stamp.hexdigest()[:10]

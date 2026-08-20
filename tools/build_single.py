@@ -10,6 +10,8 @@ va nhung atlas vao CSS duoi dang data URI.
 import base64
 import io
 import os
+import re
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -25,10 +27,21 @@ def read(name):
 def main():
     html = io.open(os.path.join(SITE, "index.html"), encoding="utf-8").read()
 
-    with open(os.path.join(SITE, "assets", "icons.png"), "rb") as f:
-        atlas_b64 = base64.b64encode(f.read()).decode("ascii")
+    # Nhung ca hai atlas: icon va sprite quai.
+    # Duong dan co gan dau ban build (?v=...) nen phai thay bang regex.
+    for name in ("icons.png", "mobs.png"):
+        path = os.path.join(SITE, "assets", name)
+        if not os.path.exists(path):
+            print(f"  (khong co {name}, bo qua)")
+            continue
 
-    html = html.replace('url("assets/icons.png")', f'url("data:image/png;base64,{atlas_b64}")')
+        with open(path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+
+        pattern = r'url\("assets/' + name.replace(".", r"\.") + r'[^"]*"\)'
+        html, n = re.subn(pattern, lambda _: f'url("data:image/png;base64,{b64}")', html)
+        if n != 1:
+            sys.exit(f"Khong thay duong dan {name} trong index.html (tim thay {n} cho)")
 
     data = read("data.json").replace("</", "<\\/")
     icons = read("icons.json").replace("</", "<\\/")
