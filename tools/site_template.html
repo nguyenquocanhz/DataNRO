@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kho Vật Phẩm NRO</title>
+<meta name="description" content="Tra cứu vật phẩm NRO theo tên hoặc id, kèm icon, gõ không dấu vẫn ra.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#eaecf2; --surface:#ffffff; --surface-2:#f4f5f9;
+  --line:#d5d9e3; --line-soft:#e4e7ee;
+  --ink:#161922; --ink-2:#4c5366; --ink-3:#7b8397;
+  --brass:#96671a; --brass-bg:#f6e9cf;
+  --jade:#1c6f5a; --jade-bg:#d9ebe4;
+  --focus:#3856c9;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(22,25,34,.06), 0 8px 24px rgba(22,25,34,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1117; --surface:#161a22; --surface-2:#1d222c;
+    --line:#2a303c; --line-soft:#232935;
+    --ink:#e8ebf2; --ink-2:#a5adbf; --ink-3:#7a8296;
+    --brass:#d8a548; --brass-bg:#3a2f18;
+    --jade:#6bc0a5; --jade-bg:#16332b;
+    --focus:#7d94f0;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1117; --surface:#161a22; --surface-2:#1d222c;
+  --line:#2a303c; --line-soft:#232935;
+  --ink:#e8ebf2; --ink-2:#a5adbf; --ink-3:#7a8296;
+  --brass:#d8a548; --brass-bg:#3a2f18;
+  --jade:#6bc0a5; --jade-bg:#16332b;
+  --focus:#7d94f0;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums}
+
+header{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
+.bar{max-width:1400px; margin:0 auto; padding:14px 20px; display:flex; flex-direction:column; gap:12px}
+.brand{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap}
+h1{margin:0; font-size:19px; font-weight:800; letter-spacing:-.02em}
+.brand .sub{color:var(--ink-3); font-size:12.5px}
+
+.controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.search{position:relative; flex:1 1 300px; min-width:220px}
+.search input{
+  width:100%; padding:9px 34px 9px 12px; font:inherit;
+  background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--radius);
+}
+.search input::placeholder{color:var(--ink-3)}
+.search kbd{
+  position:absolute; right:9px; top:50%; transform:translateY(-50%);
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3);
+  border:1px solid var(--line); border-radius:5px; padding:1px 5px;
+  pointer-events:none; background:var(--surface);
+}
+select{
+  padding:9px 10px; font:inherit; max-width:230px;
+  background:var(--surface-2); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--radius);
+}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chip{
+  padding:6px 11px; font:inherit; font-size:12.5px; font-weight:500;
+  background:var(--surface-2); color:var(--ink-2);
+  border:1px solid var(--line); border-radius:999px; cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.chip:hover{border-color:var(--ink-3)}
+button:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.count{color:var(--ink-3); font-size:12.5px; margin-left:auto; white-space:nowrap}
+.count b{color:var(--ink); font-weight:600}
+
+main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
+.grid{display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+
+.card{
+  display:grid; grid-template-columns:44px 1fr; gap:11px; align-items:center;
+  padding:10px 11px; text-align:left; font:inherit;
+  background:var(--surface); color:inherit;
+  border:1px solid var(--line-soft); border-radius:var(--radius); cursor:pointer;
+}
+.card:hover{border-color:var(--brass); box-shadow:var(--shadow)}
+.card[aria-selected="true"]{border-color:var(--brass); background:var(--brass-bg)}
+.card:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+
+.thumb{width:44px; height:44px; display:grid; place-items:center; background:var(--surface-2); border-radius:8px; overflow:hidden}
+.thumb.empty{color:var(--ink-3); font-size:10px; font-family:"IBM Plex Mono",monospace}
+
+/* mot anh atlas duy nhat, moi icon la mot khung cat tren do */
+.sp{
+  display:block; background-image:url("assets/icons.png"); background-repeat:no-repeat;
+  image-rendering:pixelated;
+}
+
+.card .nm{font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.card .meta{display:flex; gap:7px; align-items:center; margin-top:3px; font-size:11.5px; color:var(--ink-3)}
+.id{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; color:var(--brass)}
+
+.empty-state{padding:60px 20px; text-align:center; color:var(--ink-3)}
+
+.pager{display:flex; gap:5px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:22px}
+.pager:empty{display:none}
+.pager button{
+  min-width:36px; padding:7px 10px; font-size:13px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+  background:var(--surface); color:var(--ink-2);
+  border:1px solid var(--line); border-radius:8px; cursor:pointer;
+}
+.pager button:hover:not(:disabled){border-color:var(--brass); color:var(--ink)}
+.pager button[aria-current="page"]{background:var(--ink); color:var(--surface); border-color:var(--ink); font-weight:600}
+.pager button:disabled{opacity:.35; cursor:default}
+.pager .step{font-family:"Be Vietnam Pro",sans-serif; font-weight:500}
+.pager .gap{color:var(--ink-3); padding:0 3px; user-select:none}
+.pager .total{margin-left:8px; color:var(--ink-3); font-size:12.5px; font-family:"Be Vietnam Pro",sans-serif}
+
+.detail{
+  position:fixed; right:0; top:0; bottom:0; width:min(380px,100%);
+  background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow);
+  transform:translateX(100%); transition:transform .18s ease;
+  z-index:30; overflow-y:auto; padding:18px 20px 30px;
+}
+.detail[data-open="true"]{transform:translateX(0)}
+@media (prefers-reduced-motion: reduce){ .detail{transition:none} }
+.detail .top{display:flex; gap:14px; align-items:flex-start; margin-bottom:16px}
+.detail .top .thumb{width:64px; height:64px; flex:none}
+.detail h2{margin:0 0 4px; font-size:16px; font-weight:600; line-height:1.3}
+.detail .desc{color:var(--ink-2); font-size:13px; margin:10px 0 0}
+.close{
+  position:absolute; right:12px; top:12px; font:inherit;
+  background:none; border:1px solid var(--line); border-radius:8px;
+  color:var(--ink-2); cursor:pointer; padding:3px 9px;
+}
+dl{display:grid; grid-template-columns:auto 1fr; gap:7px 14px; margin:16px 0 0; font-size:13px}
+dt{color:var(--ink-3)}
+dd{margin:0; text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+dd.gold{color:var(--brass)}
+dd.gem{color:var(--jade)}
+.copy{
+  margin-top:18px; width:100%; padding:10px; font:inherit; font-weight:600;
+  background:var(--ink); color:var(--surface); border:none; border-radius:var(--radius); cursor:pointer;
+}
+.toast{
+  position:fixed; left:50%; bottom:26px; transform:translate(-50%,14px);
+  background:var(--ink); color:var(--surface);
+  padding:9px 16px; border-radius:999px; font-size:13px; font-weight:500;
+  opacity:0; pointer-events:none; transition:opacity .16s, transform .16s; z-index:40;
+}
+.toast[data-show="true"]{opacity:1; transform:translate(-50%,0)}
+footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3); font-size:12px}
+footer a{color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <h1>Kho Vật Phẩm</h1>
+      <span class="sub">bảng <span class="mono">item_template</span> · __COUNT__ vật phẩm · icon gộp trong một atlas</span>
+    </div>
+    <div class="controls">
+      <div class="search">
+        <input id="q" type="search" placeholder="Tìm theo tên hoặc id — gõ không dấu cũng ra" autocomplete="off" spellcheck="false">
+        <kbd>/</kbd>
+      </div>
+      <select id="type" aria-label="Lọc theo loại"></select>
+      <select id="sort" aria-label="Sắp xếp">
+        <option value="id">Sắp theo id</option>
+        <option value="name">Sắp theo tên</option>
+        <option value="level">Sắp theo cấp</option>
+        <option value="power">Sắp theo sức mạnh</option>
+        <option value="gold">Sắp theo giá vàng</option>
+      </select>
+      <select id="perpage" aria-label="Số vật phẩm mỗi trang">
+        <option value="60">60 / trang</option>
+        <option value="120">120 / trang</option>
+        <option value="240">240 / trang</option>
+      </select>
+      <div class="chips" id="genders"></div>
+      <span class="count" id="count">đang tải…</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty" hidden>Không có vật phẩm nào khớp.</div>
+  <nav class="pager" id="pager" aria-label="Phân trang"></nav>
+</main>
+
+<footer>
+  Bấm vào một vật phẩm để chép id. Phím <span class="mono">/</span> nhảy vào ô tìm kiếm,
+  <span class="mono">←</span> <span class="mono">→</span> lật trang, <span class="mono">Esc</span> đóng bảng chi tiết.
+</footer>
+
+<aside class="detail" id="detail" data-open="false" aria-live="polite">
+  <button class="close" id="close" aria-label="Đóng">Đóng</button>
+  <div id="detail-body"></div>
+</aside>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const el = {
+    q: document.getElementById("q"),
+    type: document.getElementById("type"),
+    sort: document.getElementById("sort"),
+    perpage: document.getElementById("perpage"),
+    genders: document.getElementById("genders"),
+    grid: document.getElementById("grid"),
+    count: document.getElementById("count"),
+    empty: document.getElementById("empty"),
+    pager: document.getElementById("pager"),
+    detail: document.getElementById("detail"),
+    detailBody: document.getElementById("detail-body"),
+    toast: document.getElementById("toast"),
+  };
+
+  let ITEMS = [], COORDS = {}, TYPE = {}, GENDER = {};
+  let filtered = [], selected = null, page = 1;
+  let perPage = Number(el.perpage.value) || 60;
+
+  const COMBINING = new RegExp("[̀-ͯ]", "g");
+  const fold = s => (s || "").normalize("NFD").replace(COMBINING, "")
+                      .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+
+  const esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+  const num = n => n.toLocaleString("vi-VN");
+
+  // ---------- nap du lieu ----------
+  Promise.all([
+    fetch("assets/items.json").then(r => r.json()),
+    fetch("assets/icons.json").then(r => r.json()),
+  ]).then(([meta, coords]) => {
+    ITEMS = meta.items;
+    COORDS = coords;
+    meta.types.forEach(t => TYPE[t.t] = t.label);
+    meta.genders.forEach(g => GENDER[g.g] = g.label);
+
+    ITEMS.forEach(it => { it._s = fold(it.name) + " " + fold(it.desc) + " " + it.id; });
+
+    el.type.innerHTML = '<option value="">Tất cả loại</option>' +
+      meta.types.map(t => `<option value="${t.t}">${esc(t.label)} · loại ${t.t} (${t.n})</option>`).join("");
+
+    el.genders.innerHTML = meta.genders
+      .map(g => `<button class="chip" type="button" data-g="${g.g}" aria-pressed="false">${esc(g.label)}</button>`)
+      .join("");
+
+    render(true);
+  }).catch(err => {
+    el.count.textContent = "lỗi tải dữ liệu";
+    el.grid.innerHTML = `<div class="empty-state">Không tải được dữ liệu: ${esc(err.message)}</div>`;
+  });
+
+  // ---------- icon tu atlas ----------
+  function iconTag(it, box){
+    const c = COORDS[it.icon];
+    if (!c) return `<div class="thumb empty">${it.icon < 0 ? "—" : esc(it.icon)}</div>`;
+    const [x, y, w, h] = c;
+    const scale = Math.min(1, box / Math.max(w, h));
+    return `<div class="thumb"><i class="sp" style="width:${w}px;height:${h}px;` +
+           `background-position:${-x}px ${-y}px;transform:scale(${scale.toFixed(3)})"></i></div>`;
+  }
+
+  // ---------- loc va sap xep ----------
+  const genderState = new Set();
+  el.genders.addEventListener("click", e => {
+    const b = e.target.closest(".chip");
+    if (!b) return;
+    const g = Number(b.dataset.g);
+    if (genderState.has(g)) { genderState.delete(g); b.setAttribute("aria-pressed", "false"); }
+    else { genderState.add(g); b.setAttribute("aria-pressed", "true"); }
+    render(true);
+  });
+
+  function applyFilter(){
+    const terms = fold(el.q.value).split(/\s+/).filter(Boolean);
+    const type = el.type.value === "" ? null : Number(el.type.value);
+    const sort = el.sort.value;
+
+    filtered = ITEMS.filter(it => {
+      if (type !== null && it.type !== type) return false;
+      if (genderState.size && !genderState.has(it.gender)) return false;
+      for (const t of terms) if (it._s.indexOf(t) === -1) return false;
+      return true;
+    });
+
+    filtered.sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name, "vi");
+      if (sort === "id") return a.id - b.id;
+      return (b[sort] || 0) - (a[sort] || 0) || a.id - b.id;
+    });
+  }
+
+  // ---------- ve ----------
+  const pageCount = () => Math.max(1, Math.ceil(filtered.length / perPage));
+
+  function render(resetPage){
+    if (resetPage) page = 1;
+    applyFilter();
+
+    const pages = pageCount();
+    if (page > pages) page = pages;
+
+    const start = (page - 1) * perPage;
+    const slice = filtered.slice(start, start + perPage);
+
+    el.grid.innerHTML = slice.map(cardHtml).join("");
+    el.empty.hidden = filtered.length > 0;
+    el.count.innerHTML = filtered.length
+      ? `<b>${num(start + 1)}–${num(start + slice.length)}</b> / ${num(filtered.length)} vật phẩm`
+      : `<b>0</b> / ${num(ITEMS.length)} vật phẩm`;
+
+    renderPager(pages);
+  }
+
+  function cardHtml(it){
+    return `<button class="card" type="button" data-id="${it.id}" aria-selected="${selected === it.id}">
+      ${iconTag(it, 40)}
+      <span>
+        <span class="nm">${esc(it.name)}</span>
+        <span class="meta"><span class="id">#${it.id}</span><span>${esc(TYPE[it.type] || ("loại " + it.type))}</span></span>
+      </span>
+    </button>`;
+  }
+
+  function pageWindow(pages){
+    const near = new Set([1, pages, page]);
+    for (let d = 1; d <= 2; d++){
+      if (page - d >= 1) near.add(page - d);
+      if (page + d <= pages) near.add(page + d);
+    }
+    const out = [];
+    let prev = 0;
+    for (const p of [...near].sort((a, b) => a - b)){
+      if (prev && p - prev > 1) out.push("gap");
+      out.push(p);
+      prev = p;
+    }
+    return out;
+  }
+
+  function renderPager(pages){
+    if (pages <= 1){ el.pager.innerHTML = ""; return; }
+    const parts = [`<button class="step" type="button" data-page="${page - 1}" ${page === 1 ? "disabled" : ""}>Trước</button>`];
+    for (const p of pageWindow(pages)){
+      parts.push(p === "gap"
+        ? `<span class="gap">…</span>`
+        : `<button type="button" data-page="${p}" ${p === page ? 'aria-current="page"' : ""}>${p}</button>`);
+    }
+    parts.push(`<button class="step" type="button" data-page="${page + 1}" ${page === pages ? "disabled" : ""}>Sau</button>`);
+    parts.push(`<span class="total">trang ${num(page)} / ${num(pages)}</span>`);
+    el.pager.innerHTML = parts.join("");
+  }
+
+  function goTo(p){
+    const next = Math.min(pageCount(), Math.max(1, p));
+    if (next === page) return;
+    page = next;
+    render();
+    window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  el.pager.addEventListener("click", e => {
+    const b = e.target.closest("button[data-page]");
+    if (b) goTo(Number(b.dataset.page));
+  });
+
+  el.perpage.addEventListener("change", () => {
+    perPage = Number(el.perpage.value) || 60;
+    render(true);
+  });
+
+  // ---------- chi tiet ----------
+  el.grid.addEventListener("click", e => {
+    const card = e.target.closest(".card");
+    if (!card) return;
+    const it = ITEMS.find(x => x.id === Number(card.dataset.id));
+    if (!it) return;
+
+    selected = it.id;
+    el.grid.querySelectorAll('.card[aria-selected="true"]').forEach(c => c.setAttribute("aria-selected", "false"));
+    card.setAttribute("aria-selected", "true");
+    openDetail(it);
+    copy(it.id);
+  });
+
+  const row = (label, value, cls) => `<dt>${esc(label)}</dt><dd class="${cls || ""}">${value}</dd>`;
+
+  function openDetail(it){
+    el.detailBody.innerHTML = `
+      <div class="top">
+        ${iconTag(it, 58)}
+        <div><h2>${esc(it.name)}</h2><span class="id">#${it.id}</span></div>
+      </div>
+      ${it.desc ? `<p class="desc">${esc(it.desc)}</p>` : ""}
+      <dl>
+        ${row("Loại", `${esc(TYPE[it.type] || "?")} · ${it.type}`)}
+        ${row("Phái", esc(GENDER[it.gender] || it.gender))}
+        ${row("Cấp", num(it.level))}
+        ${row("Sức mạnh yêu cầu", num(it.power))}
+        ${row("Giá vàng", num(it.gold), "gold")}
+        ${row("Giá ngọc", num(it.gem), "gem")}
+        ${row("icon_id", it.icon)}
+        ${row("part", it.part)}
+        ${row("head / body / leg", `${it.head} / ${it.body} / ${it.leg}`)}
+        ${row("Nâng cấp được", it.upup ? "có" : "không")}
+      </dl>
+      <button class="copy" type="button" data-copy="${it.id}">Chép id ${it.id}</button>`;
+    el.detail.dataset.open = "true";
+  }
+
+  el.detailBody.addEventListener("click", e => {
+    const b = e.target.closest("[data-copy]");
+    if (b) copy(Number(b.dataset.copy));
+  });
+  document.getElementById("close").addEventListener("click", () => { el.detail.dataset.open = "false"; });
+
+  // ---------- chep id ----------
+  let toastTimer;
+  function copy(id){
+    const done = () => flash(`Đã chép id ${id}`);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(String(id)).then(done, () => fallback(id, done));
+    } else fallback(id, done);
+  }
+
+  function fallback(id, done){
+    const ta = document.createElement("textarea");
+    ta.value = String(id);
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (_) { flash(`id ${id}`); }
+    document.body.removeChild(ta);
+  }
+
+  function flash(msg){
+    el.toast.textContent = msg;
+    el.toast.dataset.show = "true";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.toast.dataset.show = "false"; }, 1400);
+  }
+
+  // ---------- ban phim ----------
+  let debounce;
+  el.q.addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => render(true), 110);
+  });
+  el.type.addEventListener("change", () => render(true));
+  el.sort.addEventListener("change", () => render(true));
+
+  document.addEventListener("keydown", e => {
+    const typing = document.activeElement === el.q;
+    if (e.key === "/" && !typing) { e.preventDefault(); el.q.focus(); el.q.select(); }
+    else if (e.key === "Escape") {
+      if (el.detail.dataset.open === "true") el.detail.dataset.open = "false";
+      else if (typing) { el.q.value = ""; render(true); }
+    } else if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); goTo(page - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); goTo(page + 1); }
+    }
+  });
+})();
+</script>
+</body>
+</html>
