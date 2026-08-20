@@ -485,10 +485,17 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const mapsWithNpc = npcId => D.maps.filter(m => m.npcs.includes(npcId));
 
   // ---------- nap du lieu ----------
-  Promise.all([
-    fetch("assets/data.json").then(r => r.json()),
-    fetch("assets/icons.json").then(r => r.json()),
-  ]).then(([data, coords]) => {
+  // Ban gop mot file nhung san du lieu vao the script; ban tren web thi tai roi.
+  const inlineData = document.getElementById("inline-data");
+  const source = inlineData
+    ? Promise.resolve([JSON.parse(inlineData.textContent),
+                       JSON.parse(document.getElementById("inline-icons").textContent)])
+    : Promise.all([
+        fetch("assets/data.json").then(r => r.json()),
+        fetch("assets/icons.json").then(r => r.json()),
+      ]);
+
+  source.then(([data, coords]) => {
     D = data;
     COORDS = coords;
 
