@@ -115,6 +115,8 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 
 .thumb{width:44px; height:44px; display:grid; place-items:center; background:var(--surface-2); border-radius:8px; overflow:hidden}
 .thumb.empty{color:var(--ink-3); font-size:10px; font-family:"IBM Plex Mono",monospace}
+.thumb.sm{width:28px; height:28px; border-radius:6px}
+.thumb.sm.empty{font-size:9px}
 .sp{display:block; background-image:url("assets/icons.png"); background-repeat:no-repeat; image-rendering:pixelated}
 
 .id{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; color:var(--brass)}
@@ -277,12 +279,13 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const num = n => (n || 0).toLocaleString("vi-VN");
 
   // ---------- icon tu atlas ----------
-  function icon(id, box){
+  function icon(id, box, cls){
+    const klass = "thumb" + (cls ? " " + cls : "");
     const c = COORDS[id];
-    if (!c) return `<div class="thumb empty">${id < 0 ? "—" : esc(id)}</div>`;
+    if (!c) return `<div class="${klass} empty">${id < 0 ? "—" : esc(id)}</div>`;
     const [x, y, w, h] = c;
     const s = Math.min(1, box / Math.max(w, h));
-    return `<div class="thumb"><i class="sp" style="width:${w}px;height:${h}px;` +
+    return `<div class="${klass}"><i class="sp" style="width:${w}px;height:${h}px;` +
            `background-position:${-x}px ${-y}px;transform:scale(${s.toFixed(3)})"></i></div>`;
   }
 
@@ -291,8 +294,8 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const byId = (a, b) => a.id - b.id;
   const desc = key => (a, b) => (b[key] || 0) - (a[key] || 0) || a.id - b.id;
 
-  // tra nguoc id -> ten, dung cho phan chi tiet ban do
-  let mobName = {}, npcName = {}, mapName = {};
+  // tra nguoc id -> ban ghi, dung cho phan chi tiet ban do
+  let mobName = {}, npcName = {}, mapName = {}, npcById = {};
 
   // ---------- dinh nghia tung bang ----------
   const VIEWS = {
@@ -456,9 +459,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
         ${Object.keys(mobCount).length ? `<h3>Quái (${r.mobs.length} con)</h3>
           <div class="taglist">${Object.entries(mobCount).map(([t, n]) =>
             `<span class="tag">${esc(mobName[t] || ("quái " + t))} ×${n} <b>${t}</b></span>`).join("")}</div>` : ""}
-        ${r.npcs.length ? `<h3>NPC</h3>
-          <div class="taglist">${[...new Set(r.npcs)].map(n =>
-            `<span class="tag">${esc(npcName[n] || ("npc " + n))} <b>${n}</b></span>`).join("")}</div>` : ""}
+        ${r.npcs.length ? npcTable([...new Set(r.npcs)]) : ""}
         ${r.waypoints.length ? `<h3>Cửa đi</h3>
           <div class="taglist">${r.waypoints.map(w =>
             `<span class="tag">${esc(w.name || mapName[w.to] || "?")}${w.to >= 0 ? ` <b>${w.to}</b>` : ""}</span>`).join("")}</div>` : ""}`;
@@ -484,6 +485,31 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const mapsContaining = mobId => D.maps.filter(m => m.mobs.some(x => x.t === mobId));
   const mapsWithNpc = npcId => D.maps.filter(m => m.npcs.includes(npcId));
 
+  /** Bang npc_template cho cac NPC dung trong mot ban do, du cot nhu bang goc. */
+  function npcTable(ids){
+    const rows = ids.map(id => {
+      const n = npcById[id];
+      return `<tr>
+        <td>${icon(n ? n.icon : -1, 24, "sm")}</td>
+        <td><span class="id">${id}</span></td>
+        <td>${esc(n ? n.name : "không có trong npc_template")}</td>
+        <td class="n">${n ? n.head : "—"}</td>
+        <td class="n">${n ? n.body : "—"}</td>
+        <td class="n">${n ? n.leg : "—"}</td>
+        <td class="n">${n && n.icon >= 0 ? n.icon : "—"}</td>
+      </tr>`;
+    }).join("");
+
+    return `<h3>NPC trong bản đồ (${ids.length})</h3>
+      <div class="tablewrap"><table>
+        <thead><tr>
+          <th></th><th>id</th><th>Tên</th>
+          <th class="n">head</th><th class="n">body</th><th class="n">leg</th><th class="n">avatar</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
   // ---------- nap du lieu ----------
   // Ban gop mot file nhung san du lieu vao the script; ban tren web thi tai roi.
   const inlineData = document.getElementById("inline-data");
@@ -500,7 +526,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     COORDS = coords;
 
     D.mobs.forEach(m => mobName[m.id] = m.name);
-    D.npcs.forEach(n => npcName[n.id] = n.name);
+    D.npcs.forEach(n => { npcName[n.id] = n.name; npcById[n.id] = n; });
     D.maps.forEach(m => mapName[m.id] = m.name);
 
     Object.keys(VIEWS).forEach(k => {
