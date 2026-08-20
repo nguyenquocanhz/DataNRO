@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kho Vật Phẩm NRO</title>
-<meta name="description" content="Tra cứu vật phẩm NRO theo tên hoặc id, kèm icon, gõ không dấu vẫn ra.">
+<title>Kho Dữ Liệu NRO</title>
+<meta name="description" content="Tra cứu vật phẩm, kỹ năng, quái, NPC và bản đồ NRO theo tên hoặc id. Gõ không dấu vẫn ra.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -50,13 +50,24 @@ body{
 .mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums}
 
 header{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
-.bar{max-width:1400px; margin:0 auto; padding:14px 20px; display:flex; flex-direction:column; gap:12px}
+.bar{max-width:1400px; margin:0 auto; padding:13px 20px; display:flex; flex-direction:column; gap:11px}
 .brand{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap}
 h1{margin:0; font-size:19px; font-weight:800; letter-spacing:-.02em}
 .brand .sub{color:var(--ink-3); font-size:12.5px}
 
+/* ---------- tab bang du lieu ---------- */
+.tabs{display:flex; gap:3px; flex-wrap:wrap; border-bottom:1px solid var(--line-soft); margin:0 -2px}
+.tab{
+  padding:8px 13px 9px; font:inherit; font-size:13.5px; font-weight:500;
+  background:none; color:var(--ink-3); border:none; border-bottom:2px solid transparent;
+  cursor:pointer; display:flex; align-items:baseline; gap:6px;
+}
+.tab:hover{color:var(--ink-2)}
+.tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--brass); font-weight:600}
+.tab .n{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3)}
+
 .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-.search{position:relative; flex:1 1 300px; min-width:220px}
+.search{position:relative; flex:1 1 280px; min-width:200px}
 .search input{
   width:100%; padding:9px 34px 9px 12px; font:inherit;
   background:var(--surface-2); color:var(--ink);
@@ -74,6 +85,7 @@ select{
   background:var(--surface-2); color:var(--ink);
   border:1px solid var(--line); border-radius:var(--radius);
 }
+select[hidden]{display:none}
 .chips{display:flex; gap:6px; flex-wrap:wrap}
 .chip{
   padding:6px 11px; font:inherit; font-size:12.5px; font-weight:500;
@@ -91,26 +103,36 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 
 .card{
   display:grid; grid-template-columns:44px 1fr; gap:11px; align-items:center;
-  padding:10px 11px; text-align:left; font:inherit;
+  padding:10px 11px; text-align:left; font:inherit; width:100%;
   background:var(--surface); color:inherit;
   border:1px solid var(--line-soft); border-radius:var(--radius); cursor:pointer;
 }
 .card:hover{border-color:var(--brass); box-shadow:var(--shadow)}
 .card[aria-selected="true"]{border-color:var(--brass); background:var(--brass-bg)}
 .card:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+.card .nm{font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.card .meta{display:flex; gap:7px; align-items:center; margin-top:3px; font-size:11.5px; color:var(--ink-3)}
 
 .thumb{width:44px; height:44px; display:grid; place-items:center; background:var(--surface-2); border-radius:8px; overflow:hidden}
 .thumb.empty{color:var(--ink-3); font-size:10px; font-family:"IBM Plex Mono",monospace}
+.sp{display:block; background-image:url("assets/icons.png"); background-repeat:no-repeat; image-rendering:pixelated}
 
-/* mot anh atlas duy nhat, moi icon la mot khung cat tren do */
-.sp{
-  display:block; background-image:url("assets/icons.png"); background-repeat:no-repeat;
-  image-rendering:pixelated;
-}
-
-.card .nm{font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
-.card .meta{display:flex; gap:7px; align-items:center; margin-top:3px; font-size:11.5px; color:var(--ink-3)}
 .id{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; color:var(--brass)}
+
+/* ---------- bang ---------- */
+.tablewrap{overflow-x:auto; background:var(--surface); border:1px solid var(--line-soft); border-radius:var(--radius)}
+table{border-collapse:collapse; width:100%; font-size:13px}
+th,td{padding:8px 12px; text-align:left; white-space:nowrap}
+th{
+  position:sticky; top:0; background:var(--surface-2); color:var(--ink-3);
+  font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em;
+  border-bottom:1px solid var(--line);
+}
+td{border-bottom:1px solid var(--line-soft)}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+tbody tr[aria-selected="true"] td{background:var(--brass-bg)}
+.n{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
 
 .empty-state{padding:60px 20px; text-align:center; color:var(--ink-3)}
 
@@ -130,7 +152,7 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 .pager .total{margin-left:8px; color:var(--ink-3); font-size:12.5px; font-family:"Be Vietnam Pro",sans-serif}
 
 .detail{
-  position:fixed; right:0; top:0; bottom:0; width:min(380px,100%);
+  position:fixed; right:0; top:0; bottom:0; width:min(420px,100%);
   background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow);
   transform:translateX(100%); transition:transform .18s ease;
   z-index:30; overflow-y:auto; padding:18px 20px 30px;
@@ -140,7 +162,10 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 .detail .top{display:flex; gap:14px; align-items:flex-start; margin-bottom:16px}
 .detail .top .thumb{width:64px; height:64px; flex:none}
 .detail h2{margin:0 0 4px; font-size:16px; font-weight:600; line-height:1.3}
+.detail h3{margin:20px 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); font-weight:600}
 .detail .desc{color:var(--ink-2); font-size:13px; margin:10px 0 0}
+.detail table{font-size:12px}
+.detail th,.detail td{padding:5px 8px}
 .close{
   position:absolute; right:12px; top:12px; font:inherit;
   background:none; border:1px solid var(--line); border-radius:8px;
@@ -151,6 +176,13 @@ dt{color:var(--ink-3)}
 dd{margin:0; text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
 dd.gold{color:var(--brass)}
 dd.gem{color:var(--jade)}
+dd.wrap{text-align:left; font-family:inherit; white-space:normal}
+.taglist{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+.tag{
+  font-size:11.5px; padding:3px 8px; border-radius:6px;
+  background:var(--surface-2); border:1px solid var(--line-soft); color:var(--ink-2);
+}
+.tag b{color:var(--brass); font-family:"IBM Plex Mono",monospace; font-weight:600}
 .copy{
   margin-top:18px; width:100%; padding:10px; font:inherit; font-weight:600;
   background:var(--ink); color:var(--surface); border:none; border-radius:var(--radius); cursor:pointer;
@@ -163,7 +195,6 @@ dd.gem{color:var(--jade)}
 }
 .toast[data-show="true"]{opacity:1; transform:translate(-50%,0)}
 footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3); font-size:12px}
-footer a{color:var(--ink-2)}
 </style>
 </head>
 <body>
@@ -171,41 +202,38 @@ footer a{color:var(--ink-2)}
 <header>
   <div class="bar">
     <div class="brand">
-      <h1>Kho Vật Phẩm</h1>
-      <span class="sub">bảng <span class="mono">item_template</span> · 1.999 vật phẩm · icon gộp trong một atlas</span>
+      <h1>Kho Dữ Liệu NRO</h1>
+      <span class="sub">vật phẩm · kỹ năng · quái · NPC · bản đồ</span>
     </div>
+
+    <div class="tabs" id="tabs" role="tablist"></div>
+
     <div class="controls">
       <div class="search">
         <input id="q" type="search" placeholder="Tìm theo tên hoặc id — gõ không dấu cũng ra" autocomplete="off" spellcheck="false">
         <kbd>/</kbd>
       </div>
-      <select id="type" aria-label="Lọc theo loại"></select>
-      <select id="sort" aria-label="Sắp xếp">
-        <option value="id">Sắp theo id</option>
-        <option value="name">Sắp theo tên</option>
-        <option value="level">Sắp theo cấp</option>
-        <option value="power">Sắp theo sức mạnh</option>
-        <option value="gold">Sắp theo giá vàng</option>
-      </select>
-      <select id="perpage" aria-label="Số vật phẩm mỗi trang">
+      <select id="filter" aria-label="Lọc"></select>
+      <select id="sort" aria-label="Sắp xếp"></select>
+      <select id="perpage" aria-label="Số dòng mỗi trang">
         <option value="60">60 / trang</option>
         <option value="120">120 / trang</option>
         <option value="240">240 / trang</option>
       </select>
-      <div class="chips" id="genders"></div>
+      <div class="chips" id="chips"></div>
       <span class="count" id="count">đang tải…</span>
     </div>
   </div>
 </header>
 
 <main>
-  <div class="grid" id="grid"></div>
-  <div class="empty-state" id="empty" hidden>Không có vật phẩm nào khớp.</div>
+  <div id="body"></div>
+  <div class="empty-state" id="empty" hidden>Không có dòng nào khớp.</div>
   <nav class="pager" id="pager" aria-label="Phân trang"></nav>
 </main>
 
 <footer>
-  Bấm vào một vật phẩm để chép id. Phím <span class="mono">/</span> nhảy vào ô tìm kiếm,
+  Bấm một dòng để chép id. Phím <span class="mono">/</span> vào ô tìm kiếm,
   <span class="mono">←</span> <span class="mono">→</span> lật trang, <span class="mono">Esc</span> đóng bảng chi tiết.
 </footer>
 
@@ -221,12 +249,13 @@ footer a{color:var(--ink-2)}
   "use strict";
 
   const el = {
+    tabs: document.getElementById("tabs"),
     q: document.getElementById("q"),
-    type: document.getElementById("type"),
+    filter: document.getElementById("filter"),
     sort: document.getElementById("sort"),
     perpage: document.getElementById("perpage"),
-    genders: document.getElementById("genders"),
-    grid: document.getElementById("grid"),
+    chips: document.getElementById("chips"),
+    body: document.getElementById("body"),
     count: document.getElementById("count"),
     empty: document.getElementById("empty"),
     pager: document.getElementById("pager"),
@@ -235,114 +264,343 @@ footer a{color:var(--ink-2)}
     toast: document.getElementById("toast"),
   };
 
-  let ITEMS = [], COORDS = {}, TYPE = {}, GENDER = {};
-  let filtered = [], selected = null, page = 1;
+  let D = null, COORDS = {};
+  let view = "items", filtered = [], selected = null, page = 1;
   let perPage = Number(el.perpage.value) || 60;
+  const chipState = new Set();
 
   const COMBINING = new RegExp("[̀-ͯ]", "g");
   const fold = s => (s || "").normalize("NFD").replace(COMBINING, "")
                       .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
-
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  const num = n => (n || 0).toLocaleString("vi-VN");
 
-  const num = n => n.toLocaleString("vi-VN");
+  // ---------- icon tu atlas ----------
+  function icon(id, box){
+    const c = COORDS[id];
+    if (!c) return `<div class="thumb empty">${id < 0 ? "—" : esc(id)}</div>`;
+    const [x, y, w, h] = c;
+    const s = Math.min(1, box / Math.max(w, h));
+    return `<div class="thumb"><i class="sp" style="width:${w}px;height:${h}px;` +
+           `background-position:${-x}px ${-y}px;transform:scale(${s.toFixed(3)})"></i></div>`;
+  }
+
+  const rowTag = (label, value, cls) => `<dt>${esc(label)}</dt><dd class="${cls || ""}">${value}</dd>`;
+  const byName = (a, b) => a.name.localeCompare(b.name, "vi");
+  const byId = (a, b) => a.id - b.id;
+  const desc = key => (a, b) => (b[key] || 0) - (a[key] || 0) || a.id - b.id;
+
+  // tra nguoc id -> ten, dung cho phan chi tiet ban do
+  let mobName = {}, npcName = {}, mapName = {};
+
+  // ---------- dinh nghia tung bang ----------
+  const VIEWS = {
+    items: {
+      label: "Vật phẩm",
+      rows: () => D.items,
+      text: r => fold(r.name) + " " + fold(r.desc) + " " + r.id,
+      filter: () => ({ label: "Tất cả loại", key: "type",
+                       options: D.itemTypes.map(t => ({ v: t.v, label: `${t.label} · loại ${t.v} (${t.n})` })) }),
+      chips: () => D.genders.map(g => ({ v: g.v, label: g.label, key: "gender" })),
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName },
+              { v: "level", label: "Sắp theo cấp", cmp: desc("level") },
+              { v: "power", label: "Sắp theo sức mạnh", cmp: desc("power") },
+              { v: "gold", label: "Sắp theo giá vàng", cmp: desc("gold") }],
+      mode: "cards",
+      card: r => cardHtml(r, icon(r.icon, 40), labelOf(D.itemTypes, r.type)),
+      detail: r => `
+        <div class="top">${icon(r.icon, 58)}<div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        ${r.desc ? `<p class="desc">${esc(r.desc)}</p>` : ""}
+        <dl>
+          ${rowTag("Loại", `${esc(labelOf(D.itemTypes, r.type))} · ${r.type}`)}
+          ${rowTag("Phái", esc(labelOf(D.genders, r.gender)))}
+          ${rowTag("Cấp", num(r.level))}
+          ${rowTag("Sức mạnh yêu cầu", num(r.power))}
+          ${rowTag("Giá vàng", num(r.gold), "gold")}
+          ${rowTag("Giá ngọc", num(r.gem), "gem")}
+          ${rowTag("icon_id", r.icon)}
+          ${rowTag("part", r.part)}
+          ${rowTag("head / body / leg", `${r.head} / ${r.body} / ${r.leg}`)}
+          ${rowTag("Nâng cấp được", r.upup ? "có" : "không")}
+        </dl>`,
+    },
+
+    skills: {
+      label: "Kỹ năng",
+      rows: () => D.skills,
+      text: r => fold(r.name) + " " + fold(r.damInfo) + " " + r.id,
+      filter: () => ({ label: "Tất cả lớp", key: "nclass",
+                       options: D.classes.map(c => ({ v: c.v, label: `Lớp ${c.v} (${c.n})` })) }),
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName },
+              { v: "maxPoint", label: "Sắp theo điểm tối đa", cmp: desc("maxPoint") }],
+      mode: "cards",
+      card: r => cardHtml(r, icon(r.icon, 40), `${r.levels.length} cấp · lớp ${r.nclass}`),
+      detail: r => `
+        <div class="top">${icon(r.icon, 58)}<div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        ${r.damInfo ? `<p class="desc">${esc(r.damInfo)}</p>` : ""}
+        <dl>
+          ${rowTag("Lớp nhân vật", r.nclass)}
+          ${rowTag("Điểm tối đa", r.maxPoint)}
+          ${rowTag("Kiểu", r.type)}
+          ${rowTag("Kiểu dùng mana", r.manaType)}
+          ${rowTag("Ô kỹ năng", r.slot)}
+          ${rowTag("icon_id", r.icon)}
+        </dl>
+        <h3>${r.levels.length} cấp</h3>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Cấp</th><th class="n">Sát thương</th><th class="n">Mana</th><th class="n">Hồi</th><th class="n">Sức mạnh</th></tr></thead>
+          <tbody>${r.levels.map(lv => `<tr>
+            <td class="mono">${lv.point}</td>
+            <td class="n">${num(lv.damage)}</td>
+            <td class="n">${num(lv.mana)}</td>
+            <td class="n">${(lv.cd / 1000).toFixed(1)}s</td>
+            <td class="n">${num(lv.power)}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>`,
+    },
+
+    mobs: {
+      label: "Quái",
+      rows: () => D.mobs,
+      text: r => fold(r.name) + " " + r.id,
+      filter: () => ({ label: "Tất cả loại", key: "type",
+                       options: D.mobTypes.map(t => ({ v: t.v, label: `${t.label} · loại ${t.v} (${t.n})` })) }),
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName },
+              { v: "hp", label: "Sắp theo HP", cmp: desc("hp") },
+              { v: "speed", label: "Sắp theo tốc độ", cmp: desc("speed") }],
+      mode: "table",
+      cols: [
+        { label: "id", get: r => `<span class="id">${r.id}</span>` },
+        { label: "Tên", get: r => esc(r.name) },
+        { label: "Loại", get: r => r.type, n: true },
+        { label: "HP", get: r => num(r.hp), n: true },
+        { label: "Tốc độ", get: r => r.speed, n: true },
+        { label: "Tầm đi", get: r => r.rangeMove, n: true },
+        { label: "Phi tiêu", get: r => r.dart, n: true },
+        { label: "% dame", get: r => r.pctDame, n: true },
+        { label: "% tiềm năng", get: r => r.pctTiemNang, n: true },
+      ],
+      detail: r => `
+        <div class="top"><div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        <dl>
+          ${rowTag("Loại", `${esc(labelOf(D.mobTypes, r.type))} · ${r.type}`)}
+          ${rowTag("HP", num(r.hp))}
+          ${rowTag("Tốc độ", r.speed)}
+          ${rowTag("Tầm di chuyển", r.rangeMove)}
+          ${rowTag("Kiểu phi tiêu", r.dart)}
+          ${rowTag("% sát thương", r.pctDame)}
+          ${rowTag("% tiềm năng", r.pctTiemNang)}
+        </dl>
+        ${mapsContaining(r.id).length ? `<h3>Xuất hiện ở ${mapsContaining(r.id).length} bản đồ</h3>
+          <div class="taglist">${mapsContaining(r.id).slice(0, 40).map(m =>
+            `<span class="tag">${esc(m.name)} <b>${m.id}</b></span>`).join("")}</div>` : ""}`,
+    },
+
+    npcs: {
+      label: "NPC",
+      rows: () => D.npcs,
+      text: r => fold(r.name) + " " + r.id,
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName }],
+      mode: "cards",
+      card: r => cardHtml(r, icon(r.icon, 40), `head ${r.head} · body ${r.body}`),
+      detail: r => `
+        <div class="top">${icon(r.icon, 58)}<div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        <dl>
+          ${rowTag("avatar", r.icon)}
+          ${rowTag("head / body / leg", `${r.head} / ${r.body} / ${r.leg}`)}
+        </dl>
+        ${mapsWithNpc(r.id).length ? `<h3>Đứng ở ${mapsWithNpc(r.id).length} bản đồ</h3>
+          <div class="taglist">${mapsWithNpc(r.id).slice(0, 40).map(m =>
+            `<span class="tag">${esc(m.name)} <b>${m.id}</b></span>`).join("")}</div>` : ""}`,
+    },
+
+    maps: {
+      label: "Bản đồ",
+      rows: () => D.maps,
+      text: r => fold(r.name) + " " + r.id,
+      filter: () => ({ label: "Tất cả hành tinh", key: "planet",
+                       options: D.planets.map(p => ({ v: p.v, label: `${p.label} (${p.n})` })) }),
+      sorts: [{ v: "id", label: "Sắp theo id", cmp: byId },
+              { v: "name", label: "Sắp theo tên", cmp: byName },
+              { v: "zones", label: "Sắp theo số khu", cmp: desc("zones") }],
+      mode: "table",
+      cols: [
+        { label: "id", get: r => `<span class="id">${r.id}</span>` },
+        { label: "Tên", get: r => esc(r.name) },
+        { label: "Hành tinh", get: r => esc(labelOf(D.planets, r.planet)) },
+        { label: "Khu", get: r => r.zones, n: true },
+        { label: "Tối đa", get: r => r.maxPlayer, n: true },
+        { label: "Quái", get: r => r.mobs.length, n: true },
+        { label: "NPC", get: r => r.npcs.length, n: true },
+        { label: "Cửa", get: r => r.waypoints.length, n: true },
+        { label: "tile", get: r => r.tile, n: true },
+      ],
+      detail: r => {
+        const mobCount = {};
+        r.mobs.forEach(m => { mobCount[m.t] = (mobCount[m.t] || 0) + 1; });
+        return `
+        <div class="top"><div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        <dl>
+          ${rowTag("Hành tinh", esc(labelOf(D.planets, r.planet)))}
+          ${rowTag("Số khu", r.zones)}
+          ${rowTag("Tối đa người", r.maxPlayer)}
+          ${rowTag("Kiểu map", r.type)}
+          ${rowTag("tile / bg", `${r.tile} / ${r.bg}`)}
+          ${rowTag("Map đôi", r.double ? "có" : "không")}
+        </dl>
+        ${Object.keys(mobCount).length ? `<h3>Quái (${r.mobs.length} con)</h3>
+          <div class="taglist">${Object.entries(mobCount).map(([t, n]) =>
+            `<span class="tag">${esc(mobName[t] || ("quái " + t))} ×${n} <b>${t}</b></span>`).join("")}</div>` : ""}
+        ${r.npcs.length ? `<h3>NPC</h3>
+          <div class="taglist">${[...new Set(r.npcs)].map(n =>
+            `<span class="tag">${esc(npcName[n] || ("npc " + n))} <b>${n}</b></span>`).join("")}</div>` : ""}
+        ${r.waypoints.length ? `<h3>Cửa đi</h3>
+          <div class="taglist">${r.waypoints.map(w =>
+            `<span class="tag">${esc(w.name || mapName[w.to] || "?")}${w.to >= 0 ? ` <b>${w.to}</b>` : ""}</span>`).join("")}</div>` : ""}`;
+      },
+    },
+  };
+
+  function labelOf(list, v){
+    const hit = (list || []).find(x => x.v === v);
+    return hit ? hit.label : String(v);
+  }
+
+  function cardHtml(r, iconHtml, metaText){
+    return `<button class="card" type="button" data-id="${r.id}" aria-selected="${selected === r.id}">
+      ${iconHtml}
+      <span>
+        <span class="nm">${esc(r.name)}</span>
+        <span class="meta"><span class="id">#${r.id}</span><span>${esc(metaText)}</span></span>
+      </span>
+    </button>`;
+  }
+
+  const mapsContaining = mobId => D.maps.filter(m => m.mobs.some(x => x.t === mobId));
+  const mapsWithNpc = npcId => D.maps.filter(m => m.npcs.includes(npcId));
 
   // ---------- nap du lieu ----------
   Promise.all([
-    fetch("assets/items.json").then(r => r.json()),
+    fetch("assets/data.json").then(r => r.json()),
     fetch("assets/icons.json").then(r => r.json()),
-  ]).then(([meta, coords]) => {
-    ITEMS = meta.items;
+  ]).then(([data, coords]) => {
+    D = data;
     COORDS = coords;
-    meta.types.forEach(t => TYPE[t.t] = t.label);
-    meta.genders.forEach(g => GENDER[g.g] = g.label);
 
-    ITEMS.forEach(it => { it._s = fold(it.name) + " " + fold(it.desc) + " " + it.id; });
+    D.mobs.forEach(m => mobName[m.id] = m.name);
+    D.npcs.forEach(n => npcName[n.id] = n.name);
+    D.maps.forEach(m => mapName[m.id] = m.name);
 
-    el.type.innerHTML = '<option value="">Tất cả loại</option>' +
-      meta.types.map(t => `<option value="${t.t}">${esc(t.label)} · loại ${t.t} (${t.n})</option>`).join("");
+    Object.keys(VIEWS).forEach(k => {
+      VIEWS[k].rows().forEach(r => { r._s = VIEWS[k].text(r); });
+    });
 
-    el.genders.innerHTML = meta.genders
-      .map(g => `<button class="chip" type="button" data-g="${g.g}" aria-pressed="false">${esc(g.label)}</button>`)
-      .join("");
+    el.tabs.innerHTML = Object.entries(VIEWS).map(([k, v]) =>
+      `<button class="tab" type="button" role="tab" data-view="${k}" aria-selected="${k === view}">
+         ${esc(v.label)} <span class="n">${num(v.rows().length)}</span>
+       </button>`).join("");
 
-    render(true);
+    switchView("items");
   }).catch(err => {
     el.count.textContent = "lỗi tải dữ liệu";
-    el.grid.innerHTML = `<div class="empty-state">Không tải được dữ liệu: ${esc(err.message)}</div>`;
+    el.body.innerHTML = `<div class="empty-state">Không tải được dữ liệu: ${esc(err.message)}</div>`;
   });
 
-  // ---------- icon tu atlas ----------
-  function iconTag(it, box){
-    const c = COORDS[it.icon];
-    if (!c) return `<div class="thumb empty">${it.icon < 0 ? "—" : esc(it.icon)}</div>`;
-    const [x, y, w, h] = c;
-    const scale = Math.min(1, box / Math.max(w, h));
-    return `<div class="thumb"><i class="sp" style="width:${w}px;height:${h}px;` +
-           `background-position:${-x}px ${-y}px;transform:scale(${scale.toFixed(3)})"></i></div>`;
+  // ---------- doi bang ----------
+  el.tabs.addEventListener("click", e => {
+    const b = e.target.closest(".tab");
+    if (b) switchView(b.dataset.view);
+  });
+
+  function switchView(key){
+    view = key;
+    selected = null;
+    chipState.clear();
+    el.q.value = "";
+    el.detail.dataset.open = "false";
+
+    el.tabs.querySelectorAll(".tab").forEach(t =>
+      t.setAttribute("aria-selected", String(t.dataset.view === key)));
+
+    const V = VIEWS[key];
+
+    const f = V.filter ? V.filter() : null;
+    el.filter.hidden = !f;
+    if (f) el.filter.innerHTML = `<option value="">${esc(f.label)}</option>` +
+      f.options.map(o => `<option value="${o.v}">${esc(o.label)}</option>`).join("");
+
+    el.sort.innerHTML = V.sorts.map(s => `<option value="${s.v}">${esc(s.label)}</option>`).join("");
+
+    const chips = V.chips ? V.chips() : [];
+    el.chips.innerHTML = chips.map(c =>
+      `<button class="chip" type="button" data-v="${c.v}" data-key="${c.key}" aria-pressed="false">${esc(c.label)}</button>`).join("");
+
+    render(true);
   }
 
-  // ---------- loc va sap xep ----------
-  const genderState = new Set();
-  el.genders.addEventListener("click", e => {
+  el.chips.addEventListener("click", e => {
     const b = e.target.closest(".chip");
     if (!b) return;
-    const g = Number(b.dataset.g);
-    if (genderState.has(g)) { genderState.delete(g); b.setAttribute("aria-pressed", "false"); }
-    else { genderState.add(g); b.setAttribute("aria-pressed", "true"); }
+    const v = Number(b.dataset.v);
+    if (chipState.has(v)) { chipState.delete(v); b.setAttribute("aria-pressed", "false"); }
+    else { chipState.add(v); b.setAttribute("aria-pressed", "true"); }
     render(true);
   });
 
+  // ---------- loc, sap xep, ve ----------
   function applyFilter(){
+    const V = VIEWS[view];
     const terms = fold(el.q.value).split(/\s+/).filter(Boolean);
-    const type = el.type.value === "" ? null : Number(el.type.value);
-    const sort = el.sort.value;
+    const f = V.filter ? V.filter() : null;
+    const fv = el.filter.value === "" ? null : Number(el.filter.value);
+    const chipKey = V.chips ? V.chips()[0].key : null;
 
-    filtered = ITEMS.filter(it => {
-      if (type !== null && it.type !== type) return false;
-      if (genderState.size && !genderState.has(it.gender)) return false;
-      for (const t of terms) if (it._s.indexOf(t) === -1) return false;
+    filtered = V.rows().filter(r => {
+      if (f && fv !== null && r[f.key] !== fv) return false;
+      if (chipKey && chipState.size && !chipState.has(r[chipKey])) return false;
+      for (const t of terms) if (r._s.indexOf(t) === -1) return false;
       return true;
     });
 
-    filtered.sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name, "vi");
-      if (sort === "id") return a.id - b.id;
-      return (b[sort] || 0) - (a[sort] || 0) || a.id - b.id;
-    });
+    const s = V.sorts.find(x => x.v === el.sort.value) || V.sorts[0];
+    filtered.sort(s.cmp);
   }
 
-  // ---------- ve ----------
   const pageCount = () => Math.max(1, Math.ceil(filtered.length / perPage));
 
   function render(resetPage){
+    if (!D) return;
     if (resetPage) page = 1;
     applyFilter();
 
     const pages = pageCount();
     if (page > pages) page = pages;
 
+    const V = VIEWS[view];
     const start = (page - 1) * perPage;
     const slice = filtered.slice(start, start + perPage);
 
-    el.grid.innerHTML = slice.map(cardHtml).join("");
+    el.body.innerHTML = V.mode === "table" ? tableHtml(V, slice) : `<div class="grid">${slice.map(V.card).join("")}</div>`;
     el.empty.hidden = filtered.length > 0;
     el.count.innerHTML = filtered.length
-      ? `<b>${num(start + 1)}–${num(start + slice.length)}</b> / ${num(filtered.length)} vật phẩm`
-      : `<b>0</b> / ${num(ITEMS.length)} vật phẩm`;
+      ? `<b>${num(start + 1)}–${num(start + slice.length)}</b> / ${num(filtered.length)}`
+      : `<b>0</b> / ${num(V.rows().length)}`;
 
     renderPager(pages);
   }
 
-  function cardHtml(it){
-    return `<button class="card" type="button" data-id="${it.id}" aria-selected="${selected === it.id}">
-      ${iconTag(it, 40)}
-      <span>
-        <span class="nm">${esc(it.name)}</span>
-        <span class="meta"><span class="id">#${it.id}</span><span>${esc(TYPE[it.type] || ("loại " + it.type))}</span></span>
-      </span>
-    </button>`;
+  function tableHtml(V, rows){
+    return `<div class="tablewrap"><table>
+      <thead><tr>${V.cols.map(c => `<th class="${c.n ? "n" : ""}">${esc(c.label)}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(r => `<tr data-id="${r.id}" aria-selected="${selected === r.id}">
+        ${V.cols.map(c => `<td class="${c.n ? "n" : ""}">${c.get(r)}</td>`).join("")}
+      </tr>`).join("")}</tbody>
+    </table></div>`;
   }
 
   function pageWindow(pages){
@@ -365,8 +623,7 @@ footer a{color:var(--ink-2)}
     if (pages <= 1){ el.pager.innerHTML = ""; return; }
     const parts = [`<button class="step" type="button" data-page="${page - 1}" ${page === 1 ? "disabled" : ""}>Trước</button>`];
     for (const p of pageWindow(pages)){
-      parts.push(p === "gap"
-        ? `<span class="gap">…</span>`
+      parts.push(p === "gap" ? `<span class="gap">…</span>`
         : `<button type="button" data-page="${p}" ${p === page ? 'aria-current="page"' : ""}>${p}</button>`);
     }
     parts.push(`<button class="step" type="button" data-page="${page + 1}" ${page === pages ? "disabled" : ""}>Sau</button>`);
@@ -392,44 +649,23 @@ footer a{color:var(--ink-2)}
     render(true);
   });
 
-  // ---------- chi tiet ----------
-  el.grid.addEventListener("click", e => {
-    const card = e.target.closest(".card");
-    if (!card) return;
-    const it = ITEMS.find(x => x.id === Number(card.dataset.id));
-    if (!it) return;
+  // ---------- chon dong ----------
+  el.body.addEventListener("click", e => {
+    const hit = e.target.closest("[data-id]");
+    if (!hit) return;
+    const id = Number(hit.dataset.id);
+    const r = filtered.find(x => x.id === id);
+    if (!r) return;
 
-    selected = it.id;
-    el.grid.querySelectorAll('.card[aria-selected="true"]').forEach(c => c.setAttribute("aria-selected", "false"));
-    card.setAttribute("aria-selected", "true");
-    openDetail(it);
-    copy(it.id);
-  });
+    selected = id;
+    el.body.querySelectorAll('[aria-selected="true"]').forEach(n => n.setAttribute("aria-selected", "false"));
+    hit.setAttribute("aria-selected", "true");
 
-  const row = (label, value, cls) => `<dt>${esc(label)}</dt><dd class="${cls || ""}">${value}</dd>`;
-
-  function openDetail(it){
-    el.detailBody.innerHTML = `
-      <div class="top">
-        ${iconTag(it, 58)}
-        <div><h2>${esc(it.name)}</h2><span class="id">#${it.id}</span></div>
-      </div>
-      ${it.desc ? `<p class="desc">${esc(it.desc)}</p>` : ""}
-      <dl>
-        ${row("Loại", `${esc(TYPE[it.type] || "?")} · ${it.type}`)}
-        ${row("Phái", esc(GENDER[it.gender] || it.gender))}
-        ${row("Cấp", num(it.level))}
-        ${row("Sức mạnh yêu cầu", num(it.power))}
-        ${row("Giá vàng", num(it.gold), "gold")}
-        ${row("Giá ngọc", num(it.gem), "gem")}
-        ${row("icon_id", it.icon)}
-        ${row("part", it.part)}
-        ${row("head / body / leg", `${it.head} / ${it.body} / ${it.leg}`)}
-        ${row("Nâng cấp được", it.upup ? "có" : "không")}
-      </dl>
-      <button class="copy" type="button" data-copy="${it.id}">Chép id ${it.id}</button>`;
+    el.detailBody.innerHTML = VIEWS[view].detail(r) +
+      `<button class="copy" type="button" data-copy="${id}">Chép id ${id}</button>`;
     el.detail.dataset.open = "true";
-  }
+    copy(id);
+  });
 
   el.detailBody.addEventListener("click", e => {
     const b = e.target.closest("[data-copy]");
@@ -469,7 +705,7 @@ footer a{color:var(--ink-2)}
     clearTimeout(debounce);
     debounce = setTimeout(() => render(true), 110);
   });
-  el.type.addEventListener("change", () => render(true));
+  el.filter.addEventListener("change", () => render(true));
   el.sort.addEventListener("change", () => render(true));
 
   document.addEventListener("keydown", e => {
