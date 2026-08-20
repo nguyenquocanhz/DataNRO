@@ -117,7 +117,7 @@ main{max-width:1400px; margin:0 auto; padding:18px 20px 60px}
 .thumb.empty{color:var(--ink-3); font-size:10px; font-family:"IBM Plex Mono",monospace}
 .thumb.sm{width:28px; height:28px; border-radius:6px}
 .thumb.sm.empty{font-size:9px}
-.sp{display:block; background-image:url("assets/icons.png"); background-repeat:no-repeat; image-rendering:pixelated}
+.sp{display:block; background-image:url("assets/icons.png?v=__BUILD__"); background-repeat:no-repeat; image-rendering:pixelated}
 
 .id{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-weight:600; color:var(--brass)}
 
@@ -179,6 +179,29 @@ dd{margin:0; text-align:right; font-family:"IBM Plex Mono",monospace; font-varia
 dd.gold{color:var(--brass)}
 dd.gem{color:var(--jade)}
 dd.wrap{text-align:left; font-family:inherit; white-space:normal}
+/* ---------- preview hoat anh nhan vat ---------- */
+.charwrap{
+  display:flex; gap:16px; align-items:center; margin-top:10px; padding:14px;
+  background:var(--surface-2); border:1px solid var(--line-soft); border-radius:var(--radius);
+}
+.charbox{
+  width:160px; height:180px; flex:none; overflow:hidden; border-radius:8px;
+  background:repeating-conic-gradient(var(--line-soft) 0% 25%, transparent 0% 50%) 50%/14px 14px;
+}
+.charstage{
+  position:relative; width:80px; height:90px;
+  transform:scale(2); transform-origin:top left;
+}
+.charctl{display:flex; flex-direction:column; gap:9px; min-width:0; flex:1}
+.charctl button{
+  padding:7px 12px; font:inherit; font-size:13px; font-weight:500;
+  background:var(--surface); color:var(--ink-2);
+  border:1px solid var(--line); border-radius:8px; cursor:pointer;
+}
+.charctl button:hover{border-color:var(--brass); color:var(--ink)}
+.charctl input[type="range"]{width:100%; accent-color:var(--brass)}
+.charctl .lbl{font-size:11.5px; color:var(--ink-3); font-family:"IBM Plex Mono",monospace}
+
 .taglist{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
 .tag{
   font-size:11.5px; padding:3px 8px; border-radius:6px;
@@ -414,9 +437,11 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
       card: r => cardHtml(r, icon(r.icon, 40), `head ${r.head} · body ${r.body}`),
       detail: r => `
         <div class="top">${icon(r.icon, 58)}<div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
+        ${charPreview(r)}
         <dl>
           ${rowTag("avatar", r.icon)}
           ${rowTag("head / body / leg", `${r.head} / ${r.body} / ${r.leg}`)}
+          ${rowTag("Số khung hình", partFrameNote(r))}
         </dl>
         ${mapsWithNpc(r.id).length ? `<h3>Đứng ở ${mapsWithNpc(r.id).length} bản đồ</h3>
           <div class="taglist">${mapsWithNpc(r.id).slice(0, 40).map(m =>
@@ -426,7 +451,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     types: {
       label: "Loại đồ",
       rows: () => D.itemTypes,
-      text: r => fold(r.label) + " " + r.v + " " + fold(r.examples.join(" ")),
+      text: r => fold(r.label) + " " + r.v + " " + fold((r.examples || []).join(" ")),
       sorts: [{ v: "id", label: "Sắp theo số loại", cmp: byId },
               { v: "n", label: "Sắp theo số vật phẩm", cmp: desc("n") }],
       mode: "table",
@@ -435,7 +460,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
         { label: "Nhãn", get: r => esc(r.label) +
             (r.fromCode ? ` <span class="was">từ code</span>` : ` <span class="was">suy từ tên</span>`) },
         { label: "Số vật phẩm", get: r => r.n, n: true },
-        { label: "Ví dụ", get: r => esc(r.examples.join(" · ")) },
+        { label: "Ví dụ", get: r => esc((r.examples || []).join(" · ")) },
       ],
       detail: r => `
         <div class="top"><div><h2>${esc(r.label)}</h2><span class="id">loại ${r.v}</span></div></div>
@@ -446,7 +471,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
           ${rowTag("Số vật phẩm", num(r.n))}
         </dl>
         <h3>Ví dụ</h3>
-        <div class="taglist">${r.examples.map(e => `<span class="tag">${esc(e)}</span>`).join("")}</div>
+        <div class="taglist">${(r.examples || []).map(e => `<span class="tag">${esc(e)}</span>`).join("")}</div>
         <button class="copy" type="button" data-jump-type="${r.v}">Xem ${num(r.n)} vật phẩm loại này</button>`,
     },
 
@@ -593,6 +618,179 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const mapsContaining = mobId => D.maps.filter(m => m.mobs.some(x => x.t === mobId));
   const mapsWithNpc = npcId => D.maps.filter(m => m.npcs.includes(npcId));
 
+  // ---------- preview hoat anh nhan vat ----------
+  // Ghep ba manh dau / chan / than theo bang Char.CharInfo trich tu client:
+  // moi khung hinh cho biet lay khung thu may cua tung manh va dat lech bao nhieu.
+  // Khong co bang nay thi ba manh khong the xep dung cho.
+
+  const PART_SLOT = [
+    { k: 0, key: "head" },   // thu tu ve giong client: dau, roi chan, roi than
+    { k: 1, key: "leg" },
+    { k: 2, key: "body" },
+  ];
+
+  function partOf(npc, key){
+    const id = npc[key];
+    return id >= 0 ? D.parts[id] : null;
+  }
+
+  function partFrameNote(npc){
+    return PART_SLOT.map(s => {
+      const p = partOf(npc, s.key);
+      return `${s.key} ${p ? p.frames.length : 0}`;
+    }).join(" · ");
+  }
+
+  function hasChar(npc){
+    return D.charInfo && D.charInfo.length && PART_SLOT.some(s => partOf(npc, s.key));
+  }
+
+  /** Cac khung hinh ma NPC nay thuc su co anh cho MOI manh.
+   *
+   * Phan lon NPC chi dinh nghia dung mot tu the dung yen: bang part cua ho co
+   * 3/14/17 o nhung chi mot o tro toi anh that, con lai tro toi anh id 0 (2x2 rong).
+   * Chay het 33 khung se ra 32 khung trong, nen chi chay qua khung dung duoc.
+   */
+  function usableFrames(npc){
+    const out = [];
+    D.charInfo.forEach((info, cf) => {
+      let ok = true, any = false;
+      for (const slot of PART_SLOT){
+        const part = partOf(npc, slot.key);
+        if (!part) continue;
+        const fr = part.frames[info[slot.k][0]];
+        if (!fr || fr[0] <= 0) { ok = false; break; }
+        any = true;
+      }
+      if (ok && any) out.push(cf);
+    });
+    return out;
+  }
+
+  function charPreview(npc){
+    if (!hasChar(npc)) return "";
+    const frames = usableFrames(npc);
+    if (!frames.length) return "";
+
+    const many = frames.length > 1;
+    return `<div class="charwrap">
+      <div class="charbox"><div class="charstage" id="charstage"></div></div>
+      <div class="charctl">
+        ${many ? `<button type="button" id="charplay">Tạm dừng</button>
+        <input type="range" id="charframe" min="0" max="${frames.length - 1}" value="0" aria-label="Khung hình">` : ""}
+        <span class="lbl" id="charlbl">${many
+          ? `khung 1 / ${frames.length}`
+          : "chỉ có 1 tư thế — NPC này đứng yên"}</span>
+      </div>
+    </div>`;
+  }
+
+  const STAGE_W = 80, STAGE_H = 90, FOOT_Y = 82;
+
+  /** Toa do tung manh cua mot khung hinh, theo dung cong thuc trong Char.paint. */
+  function charLayers(npc, cf){
+    const info = D.charInfo[cf];
+    const out = [];
+
+    for (const slot of PART_SLOT){
+      const part = partOf(npc, slot.key);
+      if (!part) continue;
+      const [pi, ox, oy] = info[slot.k];
+      const fr = part.frames[pi];
+      if (!fr || fr[0] <= 0) continue;
+      const c = COORDS[fr[0]];
+      if (!c) continue;
+
+      const [ax, ay, w, h] = c;
+      // Char.paint: x = cx + (CharInfo.dx + pi.dx), y = cy - CharInfo.dy + pi.dy.
+      // Neo TOP|RIGHT (24) nen goc trai = x - chieu rong anh.
+      out.push({ ax, ay, w, h, x: ox + fr[1] - w, y: -oy + fr[2] });
+    }
+    return out;
+  }
+
+  /** Ghep mot khung hinh, canh cho nhan vat nam gon giua khung xem. */
+  function charFrameHtml(npc, cf, box){
+    const layers = charLayers(npc, cf);
+    if (!layers.length) return "";
+
+    // Canh theo hop bao chung cua CA doan hoat anh (truyen vao qua box),
+    // de nhan vat khong nhay lung tung giua cac khung.
+    const dx = Math.round((STAGE_W - (box.maxX - box.minX)) / 2 - box.minX);
+    const dy = Math.round(STAGE_H - 4 - box.maxY);
+
+    return layers.map(l =>
+      `<i class="sp" style="position:absolute;left:${l.x + dx}px;top:${l.y + dy}px;` +
+      `width:${l.w}px;height:${l.h}px;background-position:${-l.ax}px ${-l.ay}px"></i>`).join("");
+  }
+
+  /** Hop bao chung cua moi khung, dung de canh vi tri co dinh. */
+  function charBox(npc, frames){
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (const cf of frames){
+      for (const l of charLayers(npc, cf)){
+        minX = Math.min(minX, l.x); maxX = Math.max(maxX, l.x + l.w);
+        minY = Math.min(minY, l.y); maxY = Math.max(maxY, l.y + l.h);
+      }
+    }
+    return { minX, maxX, minY, maxY };
+  }
+
+  let animTimer = null;
+
+  function stopAnim(){
+    if (animTimer){ clearInterval(animTimer); animTimer = null; }
+  }
+
+  function startCharAnim(npc){
+    stopAnim();
+    const stage = document.getElementById("charstage");
+    if (!stage) return;
+
+    const frames = usableFrames(npc);
+    if (!frames.length) return;
+
+    const slider = document.getElementById("charframe");
+    const label = document.getElementById("charlbl");
+    const play = document.getElementById("charplay");
+    const box = charBox(npc, frames);
+    let i = 0, running = true;
+
+    function draw(){
+      stage.innerHTML = charFrameHtml(npc, frames[i], box);
+      if (slider) slider.value = String(i);
+      if (label && frames.length > 1) label.textContent = `khung ${i + 1} / ${frames.length}`;
+    }
+
+    // NPC dung yen: ve mot lan roi thoi, khong can dong ho
+    if (frames.length === 1){ draw(); return; }
+
+    function tick(){
+      stopAnim();
+      animTimer = setInterval(() => {
+        i = (i + 1) % frames.length;
+        draw();
+      }, 140);
+    }
+
+    slider.addEventListener("input", () => {
+      i = Number(slider.value);
+      running = false;
+      play.textContent = "Chạy";
+      stopAnim();
+      draw();
+    });
+
+    play.addEventListener("click", () => {
+      running = !running;
+      play.textContent = running ? "Tạm dừng" : "Chạy";
+      if (running) tick(); else stopAnim();
+    });
+
+    draw();
+    tick();
+  }
+
   /** Bang quai trong mot ban do.
    *
    * Gom theo (mau quai, cap, HP) chu khong chi theo mau: cung mot loai quai
@@ -667,8 +865,8 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     ? Promise.resolve([JSON.parse(inlineData.textContent),
                        JSON.parse(document.getElementById("inline-icons").textContent)])
     : Promise.all([
-        fetch("assets/data.json").then(r => r.json()),
-        fetch("assets/icons.json").then(r => r.json()),
+        fetch("assets/data.json?v=__BUILD__").then(r => r.json()),
+        fetch("assets/icons.json?v=__BUILD__").then(r => r.json()),
       ]);
 
   source.then(([data, coords]) => {
@@ -844,9 +1042,11 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     el.body.querySelectorAll('[aria-selected="true"]').forEach(n => n.setAttribute("aria-selected", "false"));
     hit.setAttribute("aria-selected", "true");
 
+    stopAnim();
     el.detailBody.innerHTML = VIEWS[view].detail(r) +
       `<button class="copy" type="button" data-copy="${id}">Chép id ${id}</button>`;
     el.detail.dataset.open = "true";
+    if (view === "npcs") startCharAnim(r);
     copy(id);
   });
 
@@ -861,7 +1061,10 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     const b = e.target.closest("[data-copy]");
     if (b) copy(Number(b.dataset.copy));
   });
-  document.getElementById("close").addEventListener("click", () => { el.detail.dataset.open = "false"; });
+  document.getElementById("close").addEventListener("click", () => {
+    el.detail.dataset.open = "false";
+    stopAnim();
+  });
 
   // ---------- chep id ----------
   let toastTimer;

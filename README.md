@@ -13,9 +13,14 @@ Trang tra cứu dữ liệu NRO: vật phẩm, kỹ năng, quái, NPC, bản đ�
 | Quái | 119 | `mob_template` |
 | NPC | 93 | `npc_template` |
 | Bản đồ | 165 | `map_template` |
+| Loại đồ | 33 | suy từ `item_template` |
+| Nhiệm vụ | 30 (125 bước) | `task_main_template` + `task_sub_template` |
+| Mốc sức mạnh | 88 | rút từ `power_require` |
 
-- **1.515 icon** (vật phẩm, kỹ năng, avatar NPC) gộp trong một ảnh atlas duy nhất
-- **Tra chéo**: mở một bản đồ thấy luôn tên quái, tên NPC và cửa đi trong đó; mở một con quái thấy nó xuất hiện ở những bản đồ nào
+- **2.415 icon** (vật phẩm, kỹ năng, avatar NPC, mảnh sprite nhân vật) gộp trong một ảnh atlas duy nhất
+- **Tra chéo**: mở một bản đồ thấy bảng quái và bảng NPC trong đó kèm đầy đủ cột; mở một con quái thấy nó xuất hiện ở những bản đồ nào
+- **Preview hoạt ảnh nhân vật**: mở một NPC thấy nhân vật được ghép từ ba mảnh đầu / thân / chân và chạy qua từng khung hình
+- **Địa điểm nhiệm vụ**: mỗi bước nhiệm vụ kèm NPC và bản đồ; id âm là địa điểm tượng trưng (Nhà, Làng, Trung tâm vũ trụ…) đã giải nghĩa
 - Vật phẩm / kỹ năng / NPC hiện dạng thẻ có icon; quái và bản đồ hiện dạng bảng vì dữ liệu thiên về số
 - Tìm kiếm **không dấu vẫn ra** — gõ `ao vai` ra `Áo vải 3 lỗ`
 - Lọc theo loại và phái, sắp xếp theo id / tên / cấp / sức mạnh / giá
@@ -110,6 +115,25 @@ Nhờ ba cột này mà trang tra chéo được: mở một bản đồ ra là 
 
 Ý nghĩa từng ô trong ba mảng trên là **suy ra từ dữ liệu thật đối chiếu với parser trong client**, không phải từ tài liệu chính thức — dùng thì nên kiểm lại nếu server của bạn khác bản này.
 
+## Preview hoạt ảnh nhân vật
+
+Nhân vật trong NRO không phải một ảnh, mà là **ba mảnh ghép lại**: đầu, thân, chân. Mỗi mảnh nằm trong bảng `part`, cột `DATA` là danh sách khung hình dạng `[imgId, dx, dy]`. Số khung tuỳ loại: đầu 3, thân 17, chân 14.
+
+Nhưng biết ba mảnh thôi thì chưa ghép được — còn cần biết **ở khung hình thứ i thì lấy khung nào của từng mảnh và đặt lệch bao nhiêu**. Bảng đó tên `CharInfo`, nằm trong client chứ không nằm trong DB: 33 khung × 4 mảnh × `[chỉ số khung, dx, dy]`. File `tools/charinfo.json` là bảng đó trích từ client đã decompile.
+
+Công thức vẽ lấy nguyên từ `Char.paint` của client:
+
+```
+x = cx + (CharInfo[cf][k].dx + part.frames[pi].dx) − chiều_rộng_ảnh
+y = cy − CharInfo[cf][k].dy + part.frames[pi].dy
+```
+
+Phần `− chiều_rộng_ảnh` là do client neo ảnh theo góc trên-phải (anchor 24 = `TOP | RIGHT`).
+
+Một điểm đáng lưu ý: **phần lớn NPC chỉ có đúng một tư thế**. Bảng part của họ có đủ 3/14/17 ô nhưng chỉ một ô trỏ tới ảnh thật, còn lại trỏ tới ảnh id 0 (2×2 rỗng). Trang vì thế chỉ chạy qua những khung có ảnh thật, NPC đứng yên thì ghi rõ "chỉ có 1 tư thế".
+
+Atlas chỉ gom mảnh của **NPC** (914 ảnh). Gom cả 2.111 part thì thành 12.819 ảnh / 31,7 MB, quá nặng cho một trang tĩnh.
+
 ## Vì sao gộp icon thành atlas
 
 | Cách | Dung lượng | Số request |
@@ -126,6 +150,8 @@ Base64 phình dữ liệu thêm 33% nên là lựa chọn tệ nhất. Atlas RGB
 
 Tải một lần rồi trình duyệt cache, lật trang sau không tải thêm gì.
 
+Đường dẫn tài nguyên có gắn dấu bản build (`?v=…`, băm từ nội dung). Không có nó thì trình duyệt có thể giữ `data.json` cũ — GitHub Pages đặt `Cache-Control: max-age=600` — rồi ghép với `index.html` mới, và trang sẽ báo lỗi thiếu trường.
+
 Muốn bản không mất màu:
 
 ```bash
@@ -137,12 +163,14 @@ python tools/build_site.py --lossless
 ```
 index.html            trang tra cứu, không phụ thuộc thư viện ngoài
 assets/
-  icons.png           atlas 2048×1773, 1.515 icon
+  icons.png           atlas 2048×2532, 2.415 icon (kèm mảnh sprite NPC)
   icons.json          icon_id -> [x, y, w, h] trên atlas
-  data.json           5 bảng dữ liệu + bảng nhãn loại/phái/hành tinh
+  data.json           8 bảng dữ liệu + bảng part + bảng CharInfo
 tools/
   build_site.py       sinh lại toàn bộ từ MySQL + thư mục icon
+  build_single.py     gộp thành một file HTML chạy offline
   site_template.html  khuôn của index.html
+  charinfo.json       bảng hoạt ảnh 33 khung trích từ client
 ```
 
 ## Dựng lại
@@ -162,7 +190,7 @@ DB       = "tiennghich2d"
 ICON_DIR = r"D:/.../data/icon/x2"
 ```
 
-Script đọc 5 bảng, xếp icon vào atlas theo kiểu kệ (sắp cao dần rồi rải từng hàng), rồi ghi `index.html` + 2 file trong `assets/`.
+Script đọc 8 bảng, xếp icon vào atlas theo kiểu kệ (sắp cao dần rồi rải từng hàng), rồi ghi `index.html` + 2 file trong `assets/`.
 
 Một lưu ý khi đọc dữ liệu: cột `skills` của `skill_template` và `waypoints` của `map_template` **không phải JSON hợp lệ** — chúng là mảng mà mỗi phần tử bọc trong nháy kép nhưng nháy kép bên trong lại không escape:
 

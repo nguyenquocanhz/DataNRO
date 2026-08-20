@@ -12,6 +12,7 @@ sau khong tai them gi.
 """
 import collections
 import csv
+import hashlib
 import io
 import json
 import os
@@ -251,6 +252,41 @@ def load_tasks():
     } for m in mains]
 
 
+def load_parts(part_ids):
+    """Doc bang part cho cac id can dung.
+
+    Moi part la mot bo khung hinh: DATA = [[imgId, dx, dy], ...].
+    So khung tuy TYPE, dung nhu lop Part trong client:
+    type 0 dau = 3 khung, type 1 than = 17 khung, type 2 chan = 14 khung.
+    """
+    out = {}
+    for r in rows_of("part", ["id", "TYPE", "DATA"]):
+        pid = num(r[0])
+        if pid not in part_ids:
+            continue
+        try:
+            frames = [[num(f[0], -1), num(f[1]), num(f[2])] for f in json.loads(r[2])]
+        except (ValueError, TypeError, IndexError):
+            continue
+        out[pid] = {"type": num(r[1]), "frames": frames}
+    return out
+
+
+def load_char_info():
+    """Bang hoat anh nhan vat, 33 khung x 4 bo phan x [chi so khung, dx, dy].
+
+    Trich tu Char.CharInfo trong client da decompile. Day la bang quyet dinh
+    o khung thu i thi dau/chan/than lay khung nao va dat lech bao nhieu -
+    khong co no thi khong the ghep ba manh cho dung vi tri.
+    """
+    path = os.path.join(HERE, "charinfo.json")
+    if not os.path.exists(path):
+        print("  (thieu charinfo.json, bo qua phan hoat anh)")
+        return []
+    with io.open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def load_power_marks(items, skills):
     """Cac moc suc manh: gom tat ca power_require cua vat pham va tung cap ky nang.
 
@@ -337,9 +373,20 @@ def main():
 
     os.makedirs(os.path.join(SITE, "assets"), exist_ok=True)
 
+    # bo khung hinh cua NPC: chi lay part ma NPC dung, khong lay het 2111 part
+    # (het bang thi 12.819 anh / 31,7 MB, qua nang cho mot trang web tinh)
+    npc_part_ids = set()
+    for n in npcs:
+        npc_part_ids.update(p for p in (n["head"], n["body"], n["leg"]) if p >= 0)
+    parts = load_parts(npc_part_ids)
+    charInfo = load_char_info()
+    print(f"  {len(parts)} bo phan NPC, {len(charInfo)} khung hoat anh")
+
     wanted = {it["icon"] for it in items if it["icon"] >= 0}
     wanted |= {s["icon"] for s in skills if s["icon"] >= 0}
     wanted |= {n["icon"] for n in npcs if n["icon"] >= 0}
+    for p in parts.values():
+        wanted |= {f[0] for f in p["frames"] if f[0] >= 0}
 
     atlas, coords = build_atlas(wanted)
     atlas_path = os.path.join(SITE, "assets", "icons.png")
@@ -380,6 +427,8 @@ def main():
         "maps": maps,
         "tasks": tasks,
         "powers": powers,
+        "parts": parts,
+        "charInfo": charInfo,
         "itemTypes": itemTypes,
         "taskMapSymbol": TASK_MAP_SYMBOL,
         "taskNpcSymbol": TASK_NPC_SYMBOL,
@@ -403,8 +452,18 @@ def main():
     if os.path.exists(old):
         os.remove(old)
 
-    html = io.open(TEMPLATE, encoding="utf-8").read()
+    # Dau ban build gan vao duong dan tai nguyen. Khong co no thi trinh duyet
+    # co the giu data.json cu (GitHub Pages dat max-age=600) ghep voi index.html
+    # moi -> trang bao loi vi thieu truong.
+    stamp = hashlib.sha1()
+    for name in ("data.json", "icons.json", "icons.png"):
+        with open(os.path.join(SITE, "assets", name), "rb") as f:
+            stamp.update(f.read())
+    build = stamp.hexdigest()[:10]
+
+    html = io.open(TEMPLATE, encoding="utf-8").read().replace("__BUILD__", build)
     io.open(os.path.join(SITE, "index.html"), "w", encoding="utf-8").write(html)
+    print(f"  ban build: {build}")
 
     total = sum(os.path.getsize(os.path.join(SITE, "assets", f))
                 for f in os.listdir(os.path.join(SITE, "assets")))
