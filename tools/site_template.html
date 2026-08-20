@@ -185,6 +185,7 @@ dd.wrap{text-align:left; font-family:inherit; white-space:normal}
   background:var(--surface-2); border:1px solid var(--line-soft); color:var(--ink-2);
 }
 .tag b{color:var(--brass); font-family:"IBM Plex Mono",monospace; font-weight:600}
+.was{color:var(--ink-3); font-size:10.5px; font-weight:400}
 .copy{
   margin-top:18px; width:100%; padding:10px; font:inherit; font-weight:600;
   background:var(--ink); color:var(--surface); border:none; border-radius:var(--radius); cursor:pointer;
@@ -295,7 +296,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
   const desc = key => (a, b) => (b[key] || 0) - (a[key] || 0) || a.id - b.id;
 
   // tra nguoc id -> ban ghi, dung cho phan chi tiet ban do
-  let mobName = {}, npcName = {}, mapName = {}, npcById = {};
+  let mobName = {}, npcName = {}, mapName = {}, npcById = {}, mobById = {};
 
   // ---------- dinh nghia tung bang ----------
   const VIEWS = {
@@ -443,10 +444,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
         { label: "Cửa", get: r => r.waypoints.length, n: true },
         { label: "tile", get: r => r.tile, n: true },
       ],
-      detail: r => {
-        const mobCount = {};
-        r.mobs.forEach(m => { mobCount[m.t] = (mobCount[m.t] || 0) + 1; });
-        return `
+      detail: r => `
         <div class="top"><div><h2>${esc(r.name)}</h2><span class="id">#${r.id}</span></div></div>
         <dl>
           ${rowTag("Hành tinh", esc(labelOf(D.planets, r.planet)))}
@@ -456,14 +454,11 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
           ${rowTag("tile / bg", `${r.tile} / ${r.bg}`)}
           ${rowTag("Map đôi", r.double ? "có" : "không")}
         </dl>
-        ${Object.keys(mobCount).length ? `<h3>Quái (${r.mobs.length} con)</h3>
-          <div class="taglist">${Object.entries(mobCount).map(([t, n]) =>
-            `<span class="tag">${esc(mobName[t] || ("quái " + t))} ×${n} <b>${t}</b></span>`).join("")}</div>` : ""}
+        ${r.mobs.length ? mobTable(r.mobs) : ""}
         ${r.npcs.length ? npcTable([...new Set(r.npcs)]) : ""}
         ${r.waypoints.length ? `<h3>Cửa đi</h3>
           <div class="taglist">${r.waypoints.map(w =>
-            `<span class="tag">${esc(w.name || mapName[w.to] || "?")}${w.to >= 0 ? ` <b>${w.to}</b>` : ""}</span>`).join("")}</div>` : ""}`;
-      },
+            `<span class="tag">${esc(w.name || mapName[w.to] || "?")}${w.to >= 0 ? ` <b>${w.to}</b>` : ""}</span>`).join("")}</div>` : ""}`,
     },
   };
 
@@ -484,6 +479,48 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
 
   const mapsContaining = mobId => D.maps.filter(m => m.mobs.some(x => x.t === mobId));
   const mapsWithNpc = npcId => D.maps.filter(m => m.npcs.includes(npcId));
+
+  /** Bang quai trong mot ban do.
+   *
+   * Gom theo (mau quai, cap, HP) chu khong chi theo mau: cung mot loai quai
+   * co the duoc dat nhieu cum voi cap va HP khac nhau. HP o day la HP ghi trong
+   * du lieu map, co the khac HP goc trong mob_template.
+   */
+  function mobTable(list){
+    const groups = new Map();
+    list.forEach(m => {
+      const key = m.t + "|" + m.lv + "|" + m.hp;
+      const g = groups.get(key) || { t: m.t, lv: m.lv, hp: m.hp, n: 0 };
+      g.n++;
+      groups.set(key, g);
+    });
+
+    const rows = [...groups.values()]
+      .sort((a, b) => b.n - a.n || a.t - b.t)
+      .map(g => {
+        const t = mobById[g.t];
+        const diff = t && t.hp !== g.hp;
+        return `<tr>
+          <td><span class="id">${g.t}</span></td>
+          <td>${esc(t ? t.name : "không có trong mob_template")}</td>
+          <td class="n">${g.n}</td>
+          <td class="n">${g.lv}</td>
+          <td class="n">${num(g.hp)}${diff ? ` <span class="was">gốc ${num(t.hp)}</span>` : ""}</td>
+          <td class="n">${t ? t.speed : "—"}</td>
+          <td class="n">${t ? t.rangeMove : "—"}</td>
+          <td class="n">${t ? t.pctTiemNang : "—"}</td>
+        </tr>`;
+      }).join("");
+
+    return `<h3>Quái trong bản đồ (${list.length} con)</h3>
+      <div class="tablewrap"><table>
+        <thead><tr>
+          <th>id</th><th>Tên</th><th class="n">Số con</th><th class="n">Cấp</th>
+          <th class="n">HP</th><th class="n">Tốc độ</th><th class="n">Tầm đi</th><th class="n">% TN</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
 
   /** Bang npc_template cho cac NPC dung trong mot ban do, du cot nhu bang goc. */
   function npcTable(ids){
@@ -525,7 +562,7 @@ footer{max-width:1400px; margin:0 auto; padding:0 20px 40px; color:var(--ink-3);
     D = data;
     COORDS = coords;
 
-    D.mobs.forEach(m => mobName[m.id] = m.name);
+    D.mobs.forEach(m => { mobName[m.id] = m.name; mobById[m.id] = m; });
     D.npcs.forEach(n => { npcName[n.id] = n.name; npcById[n.id] = n; });
     D.maps.forEach(m => mapName[m.id] = m.name);
 
