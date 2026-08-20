@@ -22,6 +22,94 @@ Trang tra cứu dữ liệu NRO: vật phẩm, kỹ năng, quái, NPC, bản đ�
 - Phân trang 60 · 120 · 240 mỗi trang, phím `←` `→` lật trang
 - Chạy hoàn toàn tĩnh, không cần server, không cần API
 
+## Các cột trong từng bảng
+
+### Vật phẩm — `item_template`
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id` | khoá chính, cũng là id người chơi thấy trong rương |
+| `TYPE` | nhóm vật phẩm (0 áo, 1 quần, 2 găng, 3 giày, 4 nhẫn…) |
+| `gender` | 0 Trái Đất · 1 Namếc · 2 Xayda · 3 dùng chung |
+| `NAME`, `description` | tên và mô tả |
+| `level` | cấp yêu cầu |
+| `power_require` | sức mạnh yêu cầu |
+| `gold`, `gem` | giá vàng và giá ngọc |
+| `icon_id` | trỏ tới `data/icon/x{zoom}/{icon_id}.png` |
+| `part` | id phần thân khi mặc lên người, `-1` là không mặc được |
+| `head`, `body`, `leg` | id sprite riêng cho đồ thay hình |
+| `is_up_to_up` | có nâng cấp được không |
+
+### Kỹ năng — `skill_template`
+
+| Cột | Ý nghĩa |
+|---|---|
+| `nclass_id` | lớp nhân vật sở hữu kỹ năng |
+| `id` | id kỹ năng trong lớp đó |
+| `NAME` | tên |
+| `max_point` | số điểm tối đa nâng được |
+| `mana_use_type` | kiểu tiêu hao mana |
+| `TYPE` | kiểu kỹ năng |
+| `icon_id` | icon, chung không gian id với vật phẩm |
+| `dam_info` | chuỗi mẫu mô tả sát thương, `#` là chỗ thế số |
+| `slot` | ô kỹ năng trên thanh |
+| `skills` | **từng cấp một, dạng JSON** |
+
+Mỗi phần tử trong `skills` là một cấp:
+
+```json
+{"id":7,"point":1,"power_require":10000,"damage":150,"mana_use":30,
+ "cool_down":2000,"dx":160,"dy":160,"max_fight":1,"price":500,
+ "info":"(Kame joko) Học tại Sư Phụ"}
+```
+
+`cool_down` tính bằng mili giây. `dx`/`dy` là tầm đánh. Mô hình "mỗi cấp một bản ghi" nghĩa là server không tính công thức theo cấp mà tra thẳng bảng — đổi cân bằng game là sửa dữ liệu, không sửa code.
+
+### Quái — `mob_template`
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id`, `TYPE`, `NAME` | id, nhóm quái, tên |
+| `hp` | máu |
+| `range_move` | tầm đi lại quanh chỗ đứng |
+| `speed` | tốc độ |
+| `dart_Type` | kiểu phi tiêu bắn ra |
+| `percent_dame` | % sát thương |
+| `percent_tiem_nang` | % tiềm năng rơi ra |
+
+### NPC — `npc_template`
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id`, `NAME` | id và tên |
+| `head`, `body`, `leg` | ba mảnh sprite dựng hình NPC |
+| `avatar` | icon mặt, dùng chung không gian id với vật phẩm |
+
+### Bản đồ — `map_template`
+
+| Cột | Ý nghĩa |
+|---|---|
+| `id`, `NAME` | id và tên |
+| `zones` | số khu trong map |
+| `max_player` | số người tối đa mỗi khu |
+| `type` | kiểu map |
+| `planet_id` | 0 Trái Đất · 1 Namếc · 2 Xayda |
+| `tile_id`, `bg_id`, `bg_type` | bộ tile và ảnh nền |
+| `is_map_double` | map đôi hay không |
+| `waypoints`, `mobs`, `npcs` | **danh sách mảng, xem bên dưới** |
+
+Ba cột cuối là mảng mà mỗi phần tử là một mảng số, không có tên trường:
+
+```
+waypoints  [tên, minX, minY, maxX, maxY, isEnter, isOffline, mapTo, xTo, yTo]
+mobs       [mobTemplateId, level, hp, x, y]
+npcs       [npcTemplateId, x, y]
+```
+
+Nhờ ba cột này mà trang tra chéo được: mở một bản đồ ra là thấy tên quái, tên NPC và cửa đi trong đó; mở một con quái là thấy nó đứng ở những bản đồ nào.
+
+Ý nghĩa từng ô trong ba mảng trên là **suy ra từ dữ liệu thật đối chiếu với parser trong client**, không phải từ tài liệu chính thức — dùng thì nên kiểm lại nếu server của bạn khác bản này.
+
 ## Vì sao gộp icon thành atlas
 
 | Cách | Dung lượng | Số request |
